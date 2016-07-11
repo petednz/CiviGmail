@@ -1,26 +1,29 @@
 {
   "manifest_version": 2,
-  "name": "Veda Gmail-Civi Extension",
+  "name": "CiviOutlook Gmail Extension",
   "description": "Gmail Extension to communicate with Civi",
-  "version": "0.1",
-  "browser_action": {
-    "default_popup": "setting/popup.html"
+  "version": "1",
+  "icons": {
+    "128": "icon_128.png"
   },
-  "content_scripts": [
-    {
-      "matches": ["https://mail.google.com/*"],
-      "js": ["content.js"]
-    }
-  ],
-  "web_accessible_resources": [
-    "jquery-1.10.2.min.js",
-    "gmail.js",
-    "main.js",
-    "setting/utils.js"
-  ],
   "permissions": [
     "identity",
-    "storage",
-    "http://mailchimp.vedaconsulting.co.uk/civicrm/gmail/logactivity*"
-  ]
+    "https://cms46.loc/*",
+    "http://cms46.loc/*"
+  ],
+  "externally_connectable": {
+    "matches": ["https://mail.google.com/*"]
+  },
+  "web_accessible_resources": [
+    "lib/jquery-1.11.3.min.js",
+    "lib/gmail.js",
+    "page.js"
+  ],
+  "background": { 
+    "scripts" : ["lib/jquery-1.11.3.min.js", "background.js"]
+  },
+  "content_scripts":  [{
+    "matches": [ "https://mail.google.com/*"],
+    "js": [ "lib/jquery-1.11.3.min.js", "content.js"]
+  }]
 }
