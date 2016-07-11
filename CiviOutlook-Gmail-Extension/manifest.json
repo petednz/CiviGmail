@@ -8,8 +8,7 @@
   },
   "permissions": [
     "identity",
-    "https://cms46.loc/*",
-    "http://cms46.loc/*"
+    "https://cms46.loc/*"
   ],
   "externally_connectable": {
     "matches": ["https://mail.google.com/*"]
