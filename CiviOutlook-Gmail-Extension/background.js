@@ -2,7 +2,7 @@ var oConfig = {
   CLIENT_ID: "client123id",
   CLIENT_SECRET: "client123id",
   SCOPE: 'gmail_extension',
-  REDIRECT_URI: 'https://apgcdpbjejeepihkiibdjpoeefodhkap.chromiumapp.org/' // fixme: auto generate it
+  REDIRECT_URI: 'https://oocdkbejkcafojlbdpkpmffejenhpkfb.chromiumapp.org/' // fixme: auto generate it
 } 
 var ACCESS_TOKEN_PREFIX = '#access_token=';
 var ACCESS_TOKEN_STORAGE_KEY = 'outlook-access-token';

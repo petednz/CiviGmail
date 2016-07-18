@@ -64,10 +64,22 @@ class CRM_Gmailapi_Page_AJAX {
     }
     $response['is_loggedin'] = $loggedIn;
      */
+    CRM_Core_Error::debug_var('$_SERVER', $_SERVER);
+    // FOR GMAIL CORS request - Request header field Access-Control-Allow-Origin is not allowed by Access-Control-Allow-Headers in preflight response.
+    if (isset($_SERVER['HTTP_ORIGIN'])) {
+      header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+      header('Access-Control-Allow-Credentials: true');
+      header('Access-Control-Max-Age: 86400');    // cache for 1 day
+    }
+    if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+      if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD']))
+        header("Access-Control-Allow-Methods: GET, POST, OPTIONS");         
+
+      if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']))
+        header("Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
+    }
     CRM_Utils_JSON::output($output);
     CRM_Utils_System::civiExit();
-
-
   }
 
   /**
