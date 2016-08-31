@@ -9,7 +9,9 @@
   "permissions": [
     "identity",
     "https://cms46.loc/*",
-    "http://cms46.loc/*"
+    "http://cms46.loc/*",
+    "https://mailchimp.vedaconsulting.co.uk/",
+    "http://mailchimp.vedaconsulting.co.uk/"
   ],
   "externally_connectable": {
     "matches": ["https://mail.google.com/*"]
@@ -19,7 +21,7 @@
     "lib/gmail.js",
     "page.js"
   ],
-  "background": { 
+  "background": {
     "scripts" : ["lib/jquery-1.11.3.min.js", "background.js"]
   },
   "content_scripts":  [{
