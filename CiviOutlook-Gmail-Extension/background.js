@@ -3,7 +3,7 @@ var oConfig = {
   CLIENT_SECRET: "client123id",
   SCOPE: 'gmail_extension',
   REDIRECT_URI: 'https://oocdkbejkcafojlbdpkpmffejenhpkfb.chromiumapp.org/' // fixme: auto generate it
-} 
+}
 var ACCESS_TOKEN_PREFIX = '#access_token=';
 var ACCESS_TOKEN_STORAGE_KEY = 'outlook-access-token';
 
@@ -21,7 +21,7 @@ var clearAccessToken = function() {
 
 launchAuthorizer = function() {
   console.log("Trying to login for oauth.");
-  oauthUrl = "https://cms46.loc/oauth2/authorize?" + $.param({
+  oauthUrl = "https://mailchimp.vedaconsulting.co.uk/oauth2/authorize?" + $.param({
     "client_id": oConfig.CLIENT_ID,
     "scope": oConfig.SCOPE,
     "redirect_uri": oConfig.REDIRECT_URI,

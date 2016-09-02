@@ -2,7 +2,7 @@
 <menu>
   <item>
      <path>civicrm/gmail/logactivity</path>
-     <page_callback>CRM_Gmailapi_Page_AJAX::authenticate</page_callback>
+     <page_callback>CRM_Gmailapi_Page_AJAX::callOutlookApi</page_callback>
      <title>Gmail Activity Log</title>
      <access_callback>1</access_callback>
      <is_public>true</is_public>
