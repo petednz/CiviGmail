@@ -36,6 +36,11 @@ refresh(main);
 
 // Function to record activity for selcted email
 function recordActivityFromInbox(){
+  document.dispatchEvent(new CustomEvent('content_gmailapi', {detail: {'action' : 'gmailapi'}}));
+}
+
+// Function to record activity for selcted email
+function bkpRecordActivityFromInbox(){
   // get slected emails data
   var selectedEmailsData = gmail.get.selected_emails_data();
 

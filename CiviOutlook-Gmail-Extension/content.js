@@ -6,6 +6,11 @@ var g = document.createElement('script');
 g.src = chrome.extension.getURL('lib/gmail.js');
 (document.head || document.documentElement).appendChild(g);
 
+//var c = document.createElement('script');
+////c.src = "https://apis.google.com/js/client.js?onload=handleClientLoad";;
+//c.src = "https://apis.google.com/js/client.js";;
+//(document.head || document.documentElement).appendChild(c);
+
 var p = document.createElement('script');
 p.src = chrome.extension.getURL('page.js');
 (document.head || document.documentElement).appendChild(p);
@@ -44,3 +49,26 @@ chrome.runtime.onMessage.addListener(
     }
   }
 );
+
+
+// Event listener for page
+document.addEventListener('content_gmailapi', function(e) {
+  var action = e.detail.action;
+  // fixme: could use some class than label
+  buttonLabel = $('div.coge_bttn_container > div').text();
+
+  // send message to background
+  chrome.runtime.sendMessage({'action': action, 'button': buttonLabel}, function(response) {
+    console.log(response);
+  });
+});
+
+//function handleClientLoad() {
+//  console.log('handleClientLoad() called');
+//  // send message to background
+//  chrome.runtime.sendMessage({'action': 'gmail_api', 'button': 'dnc'}, function(response) {
+//    console.log(response);
+//  });
+//  //gapi.client.setApiKey(apiKey);
+//  //window.setTimeout(checkAuth, 1);
+//}

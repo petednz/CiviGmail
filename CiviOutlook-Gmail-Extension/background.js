@@ -1,3 +1,76 @@
+//oauth2 auth
+chrome.identity.getAuthToken(
+  {'interactive': true},
+  function(gToken){
+    //load Google's javascript client libraries
+    window.gapi_onload = authorize;
+    loadScript('https://apis.google.com/js/client.js');
+    localStorage['gtoken'] = gToken;
+    console.log('getAuthToken=');
+    console.log(gToken);
+    console.log(localStorage);
+  }
+);
+
+function loadScript(url){
+  var request = new XMLHttpRequest();
+
+  request.onreadystatechange = function(){
+    if(request.readyState !== 4) {
+      return;
+    }
+
+    if(request.status !== 200){
+      return;
+    }
+
+    //console.log(request.responseText);
+    eval(request.responseText);
+  };
+
+  request.open('GET', url);
+  request.send();
+}
+
+function authorize(){
+  gapi.auth.authorize(
+    {
+      client_id: '721138563269-4s8dv4crl8869lfkgqrb51mj77u77ojc.apps.googleusercontent.com',
+      immediate: true,
+      scope: 'https://www.googleapis.com/auth/gmail.modify'
+    },
+    function(){
+      var gToken = localStorage['gtoken'];
+      console.log('gToken from cache=');
+      console.log(gToken);
+      //gapi.client.setApiKey(gToken);
+      gapi.client.setApiKey("AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM");
+      gapi.auth.setToken({access_token: gToken});
+      gapi.client.load('gmail', 'v1', listLabels);
+    }
+  );
+}
+function listLabels() {
+  var request = gapi.client.gmail.users.labels.list({
+    'userId': 'me'
+  });
+
+  request.execute(function(resp) {
+    var labels = resp.labels;
+    console.log('Labels:');
+
+    if (labels && labels.length > 0) {
+      for (i = 0; i < labels.length; i++) {
+        var label = labels[i];
+        console.log(label.name)
+      }
+    } else {
+      console.log('No Labels found.');
+    }
+  });
+}
+
+
 var oConfig = {
   CLIENT_ID: "client123id",
   CLIENT_SECRET: "client123id",
@@ -56,20 +129,37 @@ launchAuthorizer = function() {
 // listen from content
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
-    var token;
-    token = getAccessToken();
-    if (request.action == "reconnect" && request.button == 'Connect Outlook') {
-      if (!token) {
-        launchAuthorizer();
-        // sendresponse assuming successfull. Post launch content would be notified anyway
-        sendResponse({'token': true});
-      } else {
+    if (request.action == "reconnect") {
+      var token;
+      token = getAccessToken();
+      if (request.action == "reconnect" && request.button == 'Connect Outlook') {
+        if (!token) {
+          launchAuthorizer();
+          // sendresponse assuming successfull. Post launch content would be notified anyway
+          sendResponse({'token': true});
+        } else {
+          sendResponse({'token': token});
+        }
+      } else if (request.action == "reconnect" && request.button == 'Disconnect Outlook') {
+        clearAccessToken();
+        token = getAccessToken();
         sendResponse({'token': token});
       }
-    } else if (request.action == "reconnect" && request.button == 'Disconnect Outlook') {
-      clearAccessToken();
-      token = getAccessToken();
-      sendResponse({'token': token});
+    }
+    else if (request.action == "gmailapi") {
+      console.log('background gmail api listner');
+      gapi.client.setApiKey('AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM');
+      //window.setTimeout(authorize, 1);
+      gapi.client.load('gmail', 'v1', listLabels);
+      //authorize();
+      //chrome.identity.getAuthToken(
+      //    {'interactive': true},
+      //    function(){
+      //      //load Google's javascript client libraries
+      //      window.gapi_onload = authorize;
+      //      loadScript('https://apis.google.com/js/client.js');
+      //    }
+      //);
     }
   }
 );
