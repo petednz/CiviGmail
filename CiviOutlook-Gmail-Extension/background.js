@@ -182,8 +182,8 @@ chrome.runtime.onMessage.addListener(
       console.log(gToken);
       if (request.msgId) {
         get({
-          'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + request.msgId + '?key=' + 'AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM',
-          'callback': someCallback,
+          'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + request.msgId,// + '?key=' + 'AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM',
+          'callback': getMessage,
           'token': gToken,
         });
       } else {
@@ -196,6 +196,57 @@ chrome.runtime.onMessage.addListener(
     }
   }
 );
+function getMessage(message, params) {
+  var gToken = localStorage['gtoken'];
+  console.log('gToken from cache=');
+  console.log(gToken);
+  console.log("getMessage callback");
+  console.log(message);
+  var parts = message.payload.parts;
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i];
+    if (part.filename && part.filename.length > 0) {
+      var attachId = part.body.attachmentId;
+      console.log("attachId = " + attachId)
+      get({
+        'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + message.id + '/attachments/' + attachId,
+        'callback': getAttachment,
+        'callbackParams' : {'filename' : part.filename, 'mimetype' : part.mimeType},
+        'token': gToken,
+      });
+      //var request = gapi.client.gmail.users.messages.attachments.get({
+      //  'id': attachId,
+      //    'messageId': message.id,
+      //    'userId': userId
+      //});
+      //request.execute(function(attachment) {
+      //  callback(part.filename, part.mimeType, attachment);
+      //});
+    }
+  }
+}
+function getAttachment(attachment, params) {
+  console.log('attachment=');
+  console.log(attachment);
+  console.log('params=');
+  console.log(params);
+  
+  attachment = attachment.data;
+  //var binary = atob(attachment.replace(/-/g, '+').replace(/_/g, '/'));
+  //console.log(binary);
+
+  $.ajax({
+    type: "POST",
+    url: 'https://mailchimp.vedaconsulting.co.uk/civicrm/gmail/logactivity',
+    crossDomain: true,
+    contentType: 'image/png',
+    processData: false,
+    data: attachment,
+    success: function (data, textStatus ) {
+      console.log(textStatus);
+    },
+  });
+}
 
 /**
  * Make an authenticated HTTP GET request.
@@ -210,7 +261,7 @@ function get(options) {
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4 && xhr.status === 200) {
       // JSON response assumed. Other APIs may have different responses.
-      options.callback(JSON.parse(xhr.responseText));
+      options.callback(JSON.parse(xhr.responseText), options.callbackParams);
     } else {
       console.log('get', xhr.readyState, xhr.status, xhr.responseText);
     }
@@ -218,5 +269,6 @@ function get(options) {
   xhr.open("GET", options.url, true);
   // Set standard Google APIs authentication header.
   xhr.setRequestHeader('Authorization', 'Bearer ' + options.token);
+  console.log("xhr call: " + options.url)
   xhr.send();
 }
