@@ -58,7 +58,7 @@ document.addEventListener('content_gmailapi', function(e) {
   buttonLabel = $('div.coge_bttn_container > div').text();
 
   // send message to background
-  chrome.runtime.sendMessage({'action': action, 'button': buttonLabel}, function(response) {
+  chrome.runtime.sendMessage(e.detail, function(response) {
     console.log(response);
   });
 });

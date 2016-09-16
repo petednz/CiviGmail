@@ -36,19 +36,25 @@ refresh(main);
 
 // Function to record activity for selcted email
 function recordActivityFromInbox(){
-  document.dispatchEvent(new CustomEvent('content_gmailapi', {detail: {'action' : 'gmailapi'}}));
+  //document.dispatchEvent(new CustomEvent('content_gmailapi', {detail: {'action' : 'gmailapi'}}));
+
+  bkpRecordActivityFromInbox();
 }
 
 // Function to record activity for selcted email
 function bkpRecordActivityFromInbox(){
   // get slected emails data
   var selectedEmailsData = gmail.get.selected_emails_data();
+  console.log('selectedEmailsData', selectedEmailsData);
 
   if (selectedEmailsData.length > 0) {
     for (var i = 0; i < selectedEmailsData.length; i++) {
       console.log('selectedEmailsData[i]', selectedEmailsData[i]);
       // get the last email id from the thread
       var latestEmailId = selectedEmailsData[i].last_email;
+  
+      // call api
+      document.dispatchEvent(new CustomEvent('content_gmailapi', {detail: {'action' : 'gmailapi', 'msgId': latestEmailId}}));
 
       // get the email data of the last email from the thread
       for(var key in selectedEmailsData[i].threads){
@@ -86,7 +92,7 @@ function bkpRecordActivityFromInbox(){
 
       }
       // call log activity API
-      callLogActivityAPI(email, emailSubject, emailBody, emailAttachments);
+      //callLogActivityAPI(email, emailSubject, emailBody, emailAttachments);
     }
   } else{
     // if no emails selected, instruct to select one

@@ -44,12 +44,24 @@ function authorize(){
       console.log('gToken from cache=');
       console.log(gToken);
       //gapi.client.setApiKey(gToken);
-      gapi.client.setApiKey("AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM");
-      gapi.auth.setToken({access_token: gToken});
-      gapi.client.load('gmail', 'v1', listLabels);
+      //gapi.client.setApiKey("AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM");
+      //gapi.auth.setToken({access_token: gToken});
+      //gapi.client.load('gmail', 'v1', listLabels);
+      get({
+        'url': 'https://www.googleapis.com/gmail/v1/users/me/labels',
+        'callback': someCallback,
+        'token': gToken,
+      });
     }
   );
 }
+
+
+function someCallback(label) {
+  console.log("label callback");
+  console.log(label);
+}
+
 function listLabels() {
   var request = gapi.client.gmail.users.labels.list({
     'userId': 'me'
@@ -148,9 +160,9 @@ chrome.runtime.onMessage.addListener(
     }
     else if (request.action == "gmailapi") {
       console.log('background gmail api listner');
-      gapi.client.setApiKey('AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM');
+      //gapi.client.setApiKey('AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM');
       //window.setTimeout(authorize, 1);
-      gapi.client.load('gmail', 'v1', listLabels);
+      //gapi.client.load('gmail', 'v1', listLabels);
       //authorize();
       //chrome.identity.getAuthToken(
       //    {'interactive': true},
@@ -160,6 +172,46 @@ chrome.runtime.onMessage.addListener(
       //      loadScript('https://apis.google.com/js/client.js');
       //    }
       //);
+      var gToken = localStorage['gtoken'];
+      console.log('gToken from cache=');
+      console.log(gToken);
+      if (request.msgId) {
+        get({
+          'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + request.msgId + '?key=' + 'AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM',
+          'callback': someCallback,
+          'token': gToken,
+        });
+      } else {
+        get({
+          'url': 'https://www.googleapis.com/gmail/v1/users/me/labels',
+          'callback': someCallback,
+          'token': gToken,
+        });
+      }
     }
   }
 );
+
+/**
+ * Make an authenticated HTTP GET request.
+ *
+ * @param {object} options
+ *   @value {string} url - URL to make the request to. Must be whitelisted in manifest.json
+ *   @value {string} token - Google access_token to authenticate request with.
+ *   @value {function} callback - Function to receive response.
+ */
+function get(options) {
+  var xhr = new XMLHttpRequest();
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4 && xhr.status === 200) {
+      // JSON response assumed. Other APIs may have different responses.
+      options.callback(JSON.parse(xhr.responseText));
+    } else {
+      console.log('get', xhr.readyState, xhr.status, xhr.responseText);
+    }
+  };
+  xhr.open("GET", options.url, true);
+  // Set standard Google APIs authentication header.
+  xhr.setRequestHeader('Authorization', 'Bearer ' + options.token);
+  xhr.send();
+}
