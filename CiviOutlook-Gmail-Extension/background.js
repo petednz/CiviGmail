@@ -37,18 +37,23 @@ function authorize(){
     {
       client_id: '721138563269-4s8dv4crl8869lfkgqrb51mj77u77ojc.apps.googleusercontent.com',
       immediate: true,
-      scope: 'https://www.googleapis.com/auth/gmail.modify'
+      scope: ['https://mail.google.com', 'https://www.googleapis.com/auth/gmail.modify','https://www.googleapis.com/auth/gmail.readonly']
     },
     function(){
       var gToken = localStorage['gtoken'];
-      console.log('gToken from cache=');
-      console.log(gToken);
+      console.log('gToken from cache=' + gToken);
+      //console.log(gToken);
       //gapi.client.setApiKey(gToken);
       //gapi.client.setApiKey("AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM");
       //gapi.auth.setToken({access_token: gToken});
       //gapi.client.load('gmail', 'v1', listLabels);
       get({
         'url': 'https://www.googleapis.com/gmail/v1/users/me/labels',
+        'callback': someCallback,
+        'token': gToken,
+      });
+      get({
+        'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/15728f981f39146a',// + '?key=' + 'AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM',
         'callback': someCallback,
         'token': gToken,
       });
