@@ -36,13 +36,6 @@ refresh(main);
 
 // Function to record activity for selcted email
 function recordActivityFromInbox(){
-  //document.dispatchEvent(new CustomEvent('content_gmailapi', {detail: {'action' : 'gmailapi'}}));
-
-  bkpRecordActivityFromInbox();
-}
-
-// Function to record activity for selcted email
-function bkpRecordActivityFromInbox(){
   // get slected emails data
   var selectedEmailsData = gmail.get.selected_emails_data();
   console.log('selectedEmailsData', selectedEmailsData);
@@ -54,7 +47,7 @@ function bkpRecordActivityFromInbox(){
       var latestEmailId = selectedEmailsData[i].last_email;
   
       // call api
-      document.dispatchEvent(new CustomEvent('content_gmailapi', {detail: {'action' : 'gmailapi', 'msgId': latestEmailId}}));
+      // document.dispatchEvent(new CustomEvent('content_gmailapi', {detail: {'action' : 'gmailapi', 'msgId': latestEmailId}}));
 
       // get the email data of the last email from the thread
       for(var key in selectedEmailsData[i].threads){
@@ -92,7 +85,8 @@ function bkpRecordActivityFromInbox(){
 
       }
       // call log activity API
-      //callLogActivityAPI(email, emailSubject, emailBody, emailAttachments);
+      var params = {email_id: latestEmailId, email: email, subject: emailSubject, email_body: emailBody, email_attachment: emailAttachments};
+      callLogActivityAPI(params);
     }
   } else{
     // if no emails selected, instruct to select one
@@ -125,49 +119,66 @@ function recordActivityOnEmailsent(url, body, data, response, xhr){
 }
 
 // Function to make initial API request with the email address
-function callLogActivityAPI(email, emailSubject, emailBody, emailAttachments){
+function callLogActivityAPI(params){
 
   // if empty email address
-  if (email == '') {
+  if (params.email == '') {
     console.log('email address not found');
     return;
   }
 
-  // JSON stringify the emailAttachemnt array
-  var emailAttachment = emailAttachments;
+//  // JSON stringify the emailAttachemnt array
+//  var emailAttachment = emailAttachments;
 
   // assign initial data from sent email into params
-  var params = {email: email, subject: emailSubject, email_body: emailBody, email_attachment: emailAttachment};
+//  var params = {email: email, subject: emailSubject, email_body: emailBody, email_attachment: emailAttachment};
   console.log('params in call log activity api', params);
 
 
   // API call with intial sent email data
-  makeHttpRequest('GET', params);
+  //makeHttpRequest('GET', params);
 
+  console.log('making api call . . .');
+  $.ajax({
+    method: 'GET',
+    url: serverUrl,
+    data: params,
+    dataType: "text",
+    crossDomain: true,
+    success: function (data, textStatus ) {
+      // return Parsed data
+      result = JSON.parse(data);
+      callActivityConfirmation(result, params);
+    },
+    error: function(xhr, textStatus, errorThrown){
+      console.log('error test', xhr);
+      return;
+    }
+  });
 }
 
 // Function to make HTTP request
-function makeHttpRequest(method, params){
-  console.log('making api call . . .');
-
-  $.ajax({
-      method:method,
-      url: serverUrl,
-      data: params,
-      dataType: "text",
-      crossDomain: true,
-      success: function (data, textStatus ) {
-        // return Parsed data
-        result = JSON.parse(data);
-        callActivityConfirmation(result, params);
-      },
-      error: function(xhr, textStatus, errorThrown){
-        console.log('error test', xhr);
-        return;
-      }
-  });
-
-}
+//function makeHttpRequest(method, params){
+//  console.log('making api call . . .');
+//
+//  $.ajax({
+//      method:method,
+//      url: serverUrl,
+//      data: params,
+//      dataType: "text",
+//      crossDomain: true,
+//      success: function (data, textStatus ) {
+//        // return Parsed data
+//        result = JSON.parse(data);
+//        callActivityConfirmation(result, params);
+//      },
+//      error: function(xhr, textStatus, errorThrown){
+//        console.log('error test', xhr);
+//        return;
+//      }
+//  });
+//
+//}
 
 // Process HTTP response and call relevant confirmation screens
 function callActivityConfirmation(result, params){
@@ -266,7 +277,10 @@ function activityConfirmationScreen(params){
     params['email_body'] = $('textarea[name="email_body"]').val();
     console.log('creating activity', params);
     // create activity
-    makeHttpRequest('POST', params);
+//    makeHttpRequest('POST', params);
+    params.action = 'gmailapi';
+    document.dispatchEvent(new CustomEvent('content_gmailapi', {detail: params}));
+
     // remove model window on Click OK
     gmail.tools.remove_modal_window();
   });

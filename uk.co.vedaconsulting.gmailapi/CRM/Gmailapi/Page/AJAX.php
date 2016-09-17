@@ -94,19 +94,60 @@ class CRM_Gmailapi_Page_AJAX {
     if (!empty($email) && !empty($params) ) {
       CRM_Core_Error::debug_var('Params received from ajax', $params);
       // call createactivity API in outlook API extension
+      CRM_Core_Error::debug_var('$params b4 createactivity', $params);
       $result = civicrm_api3('CiviOutlook', 'createactivity', $params);
+      CRM_Core_Error::debug_var('$result', $result);
 
+      //if (!empty($_FILES['somename'])) {
+      //  foreach ($_FILES['somename']['tmp_name'] as $i => $val) {
+      //    $params["attachFile_$i"]['location'] = $val;
+      //  }
+      //  foreach ($_FILES['somename']['type'] as $i => $val) {
+      //    $params["attachFile_$i"]['type'] = $val;
+      //  }
+
+      //  $img = file_get_contents($_FILES['somename']['tmp_name'][0]);
+      //  $img = str_replace('_', '/', $img);
+      //  $img = str_replace('-', '+', $img);
+      //  $data = base64_decode($img);
+      //  file_put_contents("/opt/bitnami/apps/civicrm/htdocs/sites/default/files/civicrm/persist/contribute/new.png", $data);
+      //}
       // Process Attachment, if activity created and attachments found in the request
-      if ($result['id'] && $processAttachment){
-        $attachments = $params['attachment'];
-        if(!empty($attachments)){
+      //if ($result['id'] && $processAttachment){
+      //  $attachments = $params['attachment'];
+      //  if(!empty($attachments)){
 
-          // TO DO : Process attachments
-          foreach ($attachments as $key => $value) {
-            # code...
-          }
-          CRM_Core_Error::debug_var('attachment in final activity result ', $attachments);
+      //    // TO DO : Process attachments
+      //    foreach ($attachments as $key => $value) {
+      //      # code...
+      //    }
+      //    CRM_Core_Error::debug_var('attachment in final activity result ', $attachments);
+      //  }
+      //}
+
+      if ($result['id'] && !empty($_FILES['somename'])){
+        foreach ($_FILES['somename']['tmp_name'] as $k => $val) {
+          $img = file_get_contents($val);
+          $img = str_replace('_', '/', $img);
+          $img = str_replace('-', '+', $img);
+          $data = base64_decode($img);
+
+          $path = explode('/', $val);
+          array_pop($path);
+          $newVal = implode('/',$path) . '/' . 'new.png';
+          
+          file_put_contents($newVal, $data);
+
+          //file_put_contents("/opt/bitnami/apps/civicrm/htdocs/sites/default/files/civicrm/persist/contribute/new.png", $data);
+          $i = $k+1;
+          $params["attachFile_$i"]['location'] = $newVal;
         }
+        foreach ($_FILES['somename']['type'] as $k => $val) {
+          $i = $k+1;
+          $params["attachFile_$i"]['type'] = $val;
+        }
+        CRM_Core_Error::debug_var('processAttachment $params', $params);
+        CRM_Core_BAO_File::processAttachment($params, 'civicrm_activity', $result['id']);
       }
 
       // return API response received from outlook API

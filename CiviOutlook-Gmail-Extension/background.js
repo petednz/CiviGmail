@@ -165,37 +165,29 @@ chrome.runtime.onMessage.addListener(
     }
     else if (request.action == "gmailapi") {
       console.log('background gmail api listner');
-      //gapi.client.setApiKey('AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM');
-      //window.setTimeout(authorize, 1);
-      //gapi.client.load('gmail', 'v1', listLabels);
-      //authorize();
-      //chrome.identity.getAuthToken(
-      //    {'interactive': true},
-      //    function(){
-      //      //load Google's javascript client libraries
-      //      window.gapi_onload = authorize;
-      //      loadScript('https://apis.google.com/js/client.js');
-      //    }
-      //);
       var gToken = localStorage['gtoken'];
       console.log('gToken from cache=');
       console.log(gToken);
-      if (request.msgId) {
+      if (request.email_id) {
         get({
-          'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + request.msgId,// + '?key=' + 'AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM',
+          'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + request.email_id,
           'callback': getMessage,
-          'token': gToken,
-        });
-      } else {
-        get({
-          'url': 'https://www.googleapis.com/gmail/v1/users/me/labels',
-          'callback': someCallback,
+          'callbackParams' : request,
+          //FIXME: token retrieval to be done during xhr call
           'token': gToken,
         });
       }
+      //else {
+      //  get({
+      //    'url': 'https://www.googleapis.com/gmail/v1/users/me/labels',
+      //    'callback': someCallback,
+      //    'token': gToken,
+      //  });
+      //}
     }
   }
 );
+
 function getMessage(message, params) {
   var gToken = localStorage['gtoken'];
   console.log('gToken from cache=');
@@ -207,11 +199,15 @@ function getMessage(message, params) {
     var part = parts[i];
     if (part.filename && part.filename.length > 0) {
       var attachId = part.body.attachmentId;
-      console.log("attachId = " + attachId)
+      console.log("attachId = " + attachId);
+      //params.email_attachment.filename = part.filename;
+      //params.email_attachment.mimeType = part.mimeType;
+      params.filename = part.filename;
+      params.mimeType = part.mimeType;
       get({
         'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + message.id + '/attachments/' + attachId,
         'callback': getAttachment,
-        'callbackParams' : {'filename' : part.filename, 'mimetype' : part.mimeType},
+        'callbackParams' : params,
         'token': gToken,
       });
       //var request = gapi.client.gmail.users.messages.attachments.get({
@@ -225,13 +221,27 @@ function getMessage(message, params) {
     }
   }
 }
+
 function getAttachment(attachment, params) {
+  var formData = new FormData();
+
+  formData.append('email', params.email);
+  formData.append('subject', params.subject);
+  formData.append('email_body', params.email_body);
+  formData.append('ot_target_contact_id', params.ot_target_contact_id);
+  //formData.append('email_attachment[0][name]', params.email_attachment[0]);
+
   console.log('attachment=');
   console.log(attachment);
   console.log('params=');
   console.log(params);
   
-  attachment = attachment.data;
+  //attachment = attachment.data;
+  //params.email_attachment.tmp_name = attachment.data;
+  //formData.append('somename[]', 'file', params.email_attachment.filename);
+  //formData.append('file[]', attachment.data);
+  formData.append('somename[]', new Blob([attachment.data], {type: params.mimetype}), params.filename);
+  //formData.append('file[]', new Blob([attachment.data], {type: params.mimetype}), params.filename);
   //var binary = atob(attachment.replace(/-/g, '+').replace(/_/g, '/'));
   //console.log(binary);
 
@@ -239,9 +249,13 @@ function getAttachment(attachment, params) {
     type: "POST",
     url: 'https://mailchimp.vedaconsulting.co.uk/civicrm/gmail/logactivity',
     crossDomain: true,
-    contentType: 'image/png',
+    //contentType: 'image/png',
+    //contentType: 'multipart/form-data',
+    //contentType: 'application/x-www-form-urlencoded',
+    //contentType: params.email_attachment.mimeType,
+    contentType: false,
     processData: false,
-    data: attachment,
+    data: formData,
     success: function (data, textStatus ) {
       console.log(textStatus);
     },

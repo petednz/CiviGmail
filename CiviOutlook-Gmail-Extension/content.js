@@ -53,9 +53,10 @@ chrome.runtime.onMessage.addListener(
 
 // Event listener for page
 document.addEventListener('content_gmailapi', function(e) {
-  var action = e.detail.action;
-  // fixme: could use some class than label
-  buttonLabel = $('div.coge_bttn_container > div').text();
+  console.log("e in listener");
+  console.log(e);
+  console.log("e.detail in listener");
+  console.log(e.detail);
 
   // send message to background
   chrome.runtime.sendMessage(e.detail, function(response) {
