@@ -7,4 +7,11 @@
      <access_callback>1</access_callback>
      <is_public>true</is_public>
   </item>
+  <item>
+     <path>civicrm/gmail/logattachment</path>
+     <page_callback>CRM_Gmailapi_Page_AJAX::fileAttachment</page_callback>
+     <title>Gmail Activity Log</title>
+     <access_callback>1</access_callback>
+     <is_public>true</is_public>
+  </item>
 </menu>

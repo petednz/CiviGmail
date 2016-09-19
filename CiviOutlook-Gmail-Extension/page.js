@@ -16,9 +16,6 @@ var main = function() {
   bttn = gmail.tools.add_toolbar_button('Connect Outlook' , reConnect);
   bttn.addClass('coge_bttn_container');
 
-  // add test button on Gmail tool bar TEST
-  // gmail.tools.add_toolbar_button('Fetch Civi Data' , makeCorsRequest);
-
   $userEmail = gmail.get.user_email();
   console.log("user email : ", $userEmail);
 
@@ -27,10 +24,6 @@ var main = function() {
 
   // on Email sent
   gmail.observe.after("send_message", recordActivityOnEmailsent);
-
-   // add test button on Gmail tool bar TEST
-  // gmail.tools.add_toolbar_button('Email Sent' , testfunc);
-
 }
 refresh(main);
 
@@ -46,9 +39,6 @@ function recordActivityFromInbox(){
       // get the last email id from the thread
       var latestEmailId = selectedEmailsData[i].last_email;
   
-      // call api
-      // document.dispatchEvent(new CustomEvent('content_gmailapi', {detail: {'action' : 'gmailapi', 'msgId': latestEmailId}}));
-
       // get the email data of the last email from the thread
       for(var key in selectedEmailsData[i].threads){
         if (key == latestEmailId) {
@@ -276,8 +266,7 @@ function activityConfirmationScreen(params){
     params['subject'] = $('textarea[name="subject"]').val();
     params['email_body'] = $('textarea[name="email_body"]').val();
     console.log('creating activity', params);
-    // create activity
-//    makeHttpRequest('POST', params);
+
     params.action = 'gmailapi';
     document.dispatchEvent(new CustomEvent('content_gmailapi', {detail: params}));
 
@@ -295,55 +284,10 @@ function displayErrorMessage(errorMessage){
   });
 }
 
-
-
 function reConnect() {
   //detail could be used to pass more info
   document.dispatchEvent(new CustomEvent('content_reconnect', {detail: {'action' : 'reconnect'}}));
 }
-
-// Create the XHR object.
-/*function createCORSRequest(method, url) {
-  var xhr = new XMLHttpRequest();
-  if ("withCredentials" in xhr) {
-    // XHR for Chrome/Firefox/Opera/Safari.
-    xhr.open(method, url, true);
-  } else if (typeof XDomainRequest != "undefined") {
-    // XDomainRequest for IE.
-    xhr = new XDomainRequest();
-    xhr.open(method, url);
-  } else {
-    // CORS not supported.
-    xhr = null;
-  }
-  return xhr;
-}
-
-// Make the actual CORS request.
-function makeCorsRequest() {
-  // All HTML5 Rocks properties support CORS.
-  var url = 'https://mailchimp.vedaconsulting.co.uk/civicrm/gmail/logactivity';
-
-  var xhr = createCORSRequest('GET', url);
-  if (!xhr) {
-    console.log('CORS not supported');
-    return;
-  }
-
-  // Response handlers.
-  xhr.onload = function() {
-    var text = xhr.responseText;
-    //var title = getTitle(text);
-    console.log('Response from CORS request to ' + url + ': ' + text);
-  };
-
-  xhr.onerror = function() {
-    console.log('Woops, there was an error making the request.');
-  };
-
-  xhr.send();
-}*/
-
 
 // TEST Function to use instead of email sent
 function testfunc(){
@@ -365,5 +309,4 @@ function testfunc(){
       callLogActivityAPI(emailAddresses[i], emailSubject, emailBody, emailAttachments);
     }
   }
-
 }

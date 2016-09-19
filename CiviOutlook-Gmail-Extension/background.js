@@ -1,101 +1,19 @@
-//oauth2 auth
-chrome.identity.getAuthToken(
-  {'interactive': true},
-  function(gToken){
-    //load Google's javascript client libraries
-    window.gapi_onload = authorize;
-    loadScript('https://apis.google.com/js/client.js');
-    localStorage['gtoken'] = gToken;
-    console.log('getAuthToken=');
-    console.log(gToken);
-    console.log(localStorage);
-  }
-);
-
-function loadScript(url){
-  var request = new XMLHttpRequest();
-
-  request.onreadystatechange = function(){
-    if(request.readyState !== 4) {
-      return;
-    }
-
-    if(request.status !== 200){
-      return;
-    }
-
-    //console.log(request.responseText);
-    eval(request.responseText);
-  };
-
-  request.open('GET', url);
-  request.send();
-}
-
-function authorize(){
-  gapi.auth.authorize(
-    {
-      client_id: '721138563269-4s8dv4crl8869lfkgqrb51mj77u77ojc.apps.googleusercontent.com',
-      immediate: true,
-      scope: ['https://mail.google.com', 'https://www.googleapis.com/auth/gmail.modify','https://www.googleapis.com/auth/gmail.readonly']
-    },
-    function(){
-      var gToken = localStorage['gtoken'];
-      console.log('gToken from cache=' + gToken);
-      //console.log(gToken);
-      //gapi.client.setApiKey(gToken);
-      //gapi.client.setApiKey("AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM");
-      //gapi.auth.setToken({access_token: gToken});
-      //gapi.client.load('gmail', 'v1', listLabels);
-      get({
-        'url': 'https://www.googleapis.com/gmail/v1/users/me/labels',
-        'callback': someCallback,
-        'token': gToken,
-      });
-      get({
-        'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/15728f981f39146a',// + '?key=' + 'AIzaSyACRHUNS5qcL-Q-aYqx6LQCqthC96lFEnM',
-        'callback': someCallback,
-        'token': gToken,
-      });
-    }
-  );
-}
-
-
-function someCallback(label) {
-  console.log("label callback");
-  console.log(label);
-}
-
-function listLabels() {
-  var request = gapi.client.gmail.users.labels.list({
-    'userId': 'me'
-  });
-
-  request.execute(function(resp) {
-    var labels = resp.labels;
-    console.log('Labels:');
-
-    if (labels && labels.length > 0) {
-      for (i = 0; i < labels.length; i++) {
-        var label = labels[i];
-        console.log(label.name)
-      }
-    } else {
-      console.log('No Labels found.');
-    }
-  });
-}
-
-
-var oConfig = {
+var serverUrl   = 'https://mailchimp.vedaconsulting.co.uk/civicrm/gmail';
+var civioConfig = {
   CLIENT_ID: "client123id",
   CLIENT_SECRET: "client123id",
   SCOPE: 'gmail_extension',
-  REDIRECT_URI: 'https://oocdkbejkcafojlbdpkpmffejenhpkfb.chromiumapp.org/' // fixme: auto generate it
+  REDIRECT_URI: 'https://oocdkbejkcafojlbdpkpmffejenhpkfb.chromiumapp.org/', // fixme: auto generate it
+  URL: 'https://mailchimp.vedaconsulting.co.uk/oauth2/authorize?'  
 }
 var ACCESS_TOKEN_PREFIX = '#access_token=';
 var ACCESS_TOKEN_STORAGE_KEY = 'outlook-access-token';
+
+var gapioConfig = {
+  CLIENT_ID: '721138563269-4s8dv4crl8869lfkgqrb51mj77u77ojc.apps.googleusercontent.com',
+  SCOPE: ['https://mail.google.com', 'https://www.googleapis.com/auth/gmail.modify','https://www.googleapis.com/auth/gmail.readonly'],
+}
+var GAPI_ACCESS_TOKEN = 'gapi-token';
 
 var setAccessToken = function(accessToken) {
   localStorage[ACCESS_TOKEN_STORAGE_KEY] = accessToken;
@@ -111,10 +29,10 @@ var clearAccessToken = function() {
 
 launchAuthorizer = function() {
   console.log("Trying to login for oauth.");
-  oauthUrl = "https://mailchimp.vedaconsulting.co.uk/oauth2/authorize?" + $.param({
-    "client_id": oConfig.CLIENT_ID,
-    "scope": oConfig.SCOPE,
-    "redirect_uri": oConfig.REDIRECT_URI,
+  oauthUrl = civioConfig.URL + $.param({
+    "client_id": civioConfig.CLIENT_ID,
+    "scope": civioConfig.SCOPE,
+    "redirect_uri": civioConfig.REDIRECT_URI,
     "response_type":"token",
     "state" : 'null',
     "access_type":"offline",
@@ -143,7 +61,53 @@ launchAuthorizer = function() {
   );
 }
 
-// listen from content
+// gmail api oauth
+chrome.identity.getAuthToken(
+  {'interactive': true},
+  function(gapiToken) {
+    //load Google's javascript client libraries
+    window.gapi_onload = authorize;
+    loadScript('https://apis.google.com/js/client.js');
+    localStorage[GAPI_ACCESS_TOKEN] = gapiToken;
+    console.log('google api authorization response token = ' + gapiToken);
+  }
+);
+
+function loadScript(url){
+  var request = new XMLHttpRequest();
+
+  request.onreadystatechange = function(){
+    if(request.readyState !== 4) {
+      return;
+    }
+
+    if(request.status !== 200){
+      return;
+    }
+
+    eval(request.responseText);
+  };
+
+  request.open('GET', url);
+  request.send();
+}
+
+function authorize(){
+  gapi.auth.authorize(
+    {
+      client_id: gapioConfig.CLIENT_ID,
+      immediate: true,
+      scope: gapioConfig.SCOPE
+    },
+    function() {
+      var gapiToken = localStorage[GAPI_ACCESS_TOKEN];
+      console.log('post authorization gapiToken from cache= ' + gapiToken);
+    }
+  );
+}
+
+
+// listen from content for event raised
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
     if (request.action == "reconnect") {
@@ -164,99 +128,82 @@ chrome.runtime.onMessage.addListener(
       }
     }
     else if (request.action == "gmailapi") {
-      console.log('background gmail api listner');
-      var gToken = localStorage['gtoken'];
-      console.log('gToken from cache=');
-      console.log(gToken);
       if (request.email_id) {
         get({
           'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + request.email_id,
           'callback': getMessage,
           'callbackParams' : request,
-          //FIXME: token retrieval to be done during xhr call
-          'token': gToken,
         });
+      } else {
+        console.log('message id not known.');
       }
-      //else {
-      //  get({
-      //    'url': 'https://www.googleapis.com/gmail/v1/users/me/labels',
-      //    'callback': someCallback,
-      //    'token': gToken,
-      //  });
-      //}
     }
   }
 );
 
 function getMessage(message, params) {
-  var gToken = localStorage['gtoken'];
-  console.log('gToken from cache=');
-  console.log(gToken);
-  console.log("getMessage callback");
-  console.log(message);
-  var parts = message.payload.parts;
-  for (var i = 0; i < parts.length; i++) {
-    var part = parts[i];
-    if (part.filename && part.filename.length > 0) {
-      var attachId = part.body.attachmentId;
-      console.log("attachId = " + attachId);
-      //params.email_attachment.filename = part.filename;
-      //params.email_attachment.mimeType = part.mimeType;
-      params.filename = part.filename;
-      params.mimeType = part.mimeType;
-      get({
-        'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + message.id + '/attachments/' + attachId,
-        'callback': getAttachment,
-        'callbackParams' : params,
-        'token': gToken,
-      });
-      //var request = gapi.client.gmail.users.messages.attachments.get({
-      //  'id': attachId,
-      //    'messageId': message.id,
-      //    'userId': userId
-      //});
-      //request.execute(function(attachment) {
-      //  callback(part.filename, part.mimeType, attachment);
-      //});
-    }
-  }
-}
-
-function getAttachment(attachment, params) {
   var formData = new FormData();
-
   formData.append('email', params.email);
   formData.append('subject', params.subject);
   formData.append('email_body', params.email_body);
   formData.append('ot_target_contact_id', params.ot_target_contact_id);
-  //formData.append('email_attachment[0][name]', params.email_attachment[0]);
-
-  console.log('attachment=');
-  console.log(attachment);
-  console.log('params=');
-  console.log(params);
-  
-  //attachment = attachment.data;
-  //params.email_attachment.tmp_name = attachment.data;
-  //formData.append('somename[]', 'file', params.email_attachment.filename);
-  //formData.append('file[]', attachment.data);
-  formData.append('somename[]', new Blob([attachment.data], {type: params.mimetype}), params.filename);
-  //formData.append('file[]', new Blob([attachment.data], {type: params.mimetype}), params.filename);
-  //var binary = atob(attachment.replace(/-/g, '+').replace(/_/g, '/'));
-  //console.log(binary);
 
   $.ajax({
     type: "POST",
-    url: 'https://mailchimp.vedaconsulting.co.uk/civicrm/gmail/logactivity',
+    //FIXME: use a constant or config
+    url: serverUrl + '/logactivity',
     crossDomain: true,
-    //contentType: 'image/png',
-    //contentType: 'multipart/form-data',
-    //contentType: 'application/x-www-form-urlencoded',
-    //contentType: params.email_attachment.mimeType,
+    contentType: false,
+    processData: false,
+    data: formData,
+    success: function (data, textStatus) {
+      console.log("activity posted with..");
+      console.log(data);
+      console.log(textStatus);
+      //getAttachment();
+      if (data.id) {
+        // FIXME: move to function
+        var parts = message.payload.parts;
+        //var params.attachment = [];
+        for (var i = 0; i < parts.length; i++) {
+          var part = parts[i];
+          if (part.filename && part.filename.length > 0) {
+            var attachId = part.body.attachmentId;
+            console.log("attachId = " + attachId);
+            get({
+              'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + message.id + '/attachments/' + attachId,
+              'callback': getAttachment,
+              'callbackParams' : {
+                'activityID' : data.id,
+                'filename' : part.filename,
+                'mimetype' : part.mimeType
+              }
+            });
+          }
+        }
+      }
+    },
+  });
+}
+
+function getAttachment(attachment, params) {
+  var formData = new FormData();
+  formData.append('activityID', params.activityID);
+  formData.append('mimeType', params.mimetype);
+
+  formData.append('file', new Blob([attachment.data], {type: params.mimetype}), params.filename);
+  console.log(formData);
+
+  $.ajax({
+    type: "POST",
+    // FIXME: use a constant or config
+    url: serverUrl + '/logattachment',
+    crossDomain: true,
     contentType: false,
     processData: false,
     data: formData,
     success: function (data, textStatus ) {
+      // FIXME: inform user of any failures
       console.log(textStatus);
     },
   });
@@ -267,7 +214,6 @@ function getAttachment(attachment, params) {
  *
  * @param {object} options
  *   @value {string} url - URL to make the request to. Must be whitelisted in manifest.json
- *   @value {string} token - Google access_token to authenticate request with.
  *   @value {function} callback - Function to receive response.
  */
 function get(options) {
@@ -282,7 +228,11 @@ function get(options) {
   };
   xhr.open("GET", options.url, true);
   // Set standard Google APIs authentication header.
-  xhr.setRequestHeader('Authorization', 'Bearer ' + options.token);
+  var gapiToken = localStorage[GAPI_ACCESS_TOKEN];
+  if (!gapiToken || 0 === gapiToken.length) {
+    console.log('Google API Token not known.');
+  }
+  xhr.setRequestHeader('Authorization', 'Bearer ' + gapiToken);
   console.log("xhr call: " + options.url)
   xhr.send();
 }
