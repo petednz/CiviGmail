@@ -117,17 +117,7 @@ function callLogActivityAPI(params){
     return;
   }
 
-//  // JSON stringify the emailAttachemnt array
-//  var emailAttachment = emailAttachments;
-
-  // assign initial data from sent email into params
-//  var params = {email: email, subject: emailSubject, email_body: emailBody, email_attachment: emailAttachment};
   console.log('params in call log activity api', params);
-
-
-  // API call with intial sent email data
-  //makeHttpRequest('GET', params);
-
   console.log('making api call . . .');
   $.ajax({
     method: 'GET',
@@ -146,29 +136,6 @@ function callLogActivityAPI(params){
     }
   });
 }
-
-// Function to make HTTP request
-//function makeHttpRequest(method, params){
-//  console.log('making api call . . .');
-//
-//  $.ajax({
-//      method:method,
-//      url: serverUrl,
-//      data: params,
-//      dataType: "text",
-//      crossDomain: true,
-//      success: function (data, textStatus ) {
-//        // return Parsed data
-//        result = JSON.parse(data);
-//        callActivityConfirmation(result, params);
-//      },
-//      error: function(xhr, textStatus, errorThrown){
-//        console.log('error test', xhr);
-//        return;
-//      }
-//  });
-//
-//}
 
 // Process HTTP response and call relevant confirmation screens
 function callActivityConfirmation(result, params){
