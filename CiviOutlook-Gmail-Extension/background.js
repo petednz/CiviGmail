@@ -63,7 +63,7 @@ launchAuthorizer = function() {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
           // DS: if you receive this error : the error Error in response to tabs.query: TypeError: Cannot read property 'id' of undefined
           // try close dev consoles
-          chrome.tabs.sendMessage(tabs[0].id, {action: 'post_webauthflow',token: accessToken}, function(response) {});
+          chrome.tabs.sendMessage(tabs[0].id, {action: 'content_webauthflow',token: accessToken}, function(response) {});
         });
       }
     );
@@ -142,21 +142,58 @@ chrome.runtime.onMessage.addListener(
       if (request.email_id) {
         get({
           'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + request.email_id,
-          'callback': getMessage,
+          'callback': createActivity,
           'callbackParams' : request,
         });
       } else {
         console.log('message id not known.');
       }
     }
+    else if (request.action == "civiurl") {
+      checkContactExists(request);
+    }
   }
 );
 
-function getMessage(message, params) {
+function checkContactExists(request) {
+  // if empty email address
+  if (request.email == '') {
+    console.log('email address not found');
+    return;
+  }
   chrome.storage.sync.get("civiUrl", function (obj) {
     civiUrl = obj.civiUrl;
     civiUrl.replace(/\/$/, "");// remove any trailing slash
-    console.log("civiUrl in getMessage = " + civiUrl);
+    console.log("civiUrl in action:civiurl = " + civiUrl);
+    console.log('request in checkContactExists', request);
+
+    $.ajax({
+      method: 'GET',
+      url: civiUrl + '/gmail/logactivity?oauth_token=' + getAccessToken(),
+      data: request,
+      dataType: "text",
+      crossDomain: true,
+      success: function (data, textStatus ) {
+        result = JSON.parse(data);
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+          // DS: if you receive this error : the error Error in response to tabs.query: TypeError: Cannot read property 'id' of undefined
+          // try close dev consoles
+          chrome.tabs.sendMessage(tabs[0].id, {action: 'content_civiurl',result: result, params: request}, function(response) {});
+        });
+      },
+      error: function(xhr, textStatus, errorThrown){
+        console.log('error test', xhr);
+        return;
+      }
+    });
+  });
+}
+
+function createActivity(message, params) {
+  chrome.storage.sync.get("civiUrl", function (obj) {
+    civiUrl = obj.civiUrl;
+    civiUrl.replace(/\/$/, "");// remove any trailing slash
+    console.log("civiUrl in createActivity = " + civiUrl);
 
     var formData = new FormData();
     formData.append('email', params.email);
@@ -167,7 +204,7 @@ function getMessage(message, params) {
     $.ajax({
       type: "POST",
       //FIXME: use a constant or config
-      url: civiUrl + '/gmail/logactivity',
+      url: civiUrl + '/gmail/logactivity?oauth_token=' + getAccessToken(),
       crossDomain: true,
       contentType: false,
       processData: false,
@@ -176,7 +213,6 @@ function getMessage(message, params) {
         console.log("activity posted with..");
         console.log(data);
         console.log(textStatus);
-        //getAttachment();
         if (data.id) {
           // FIXME: move to function
           var parts = message.payload.parts;
@@ -188,7 +224,7 @@ function getMessage(message, params) {
               console.log("attachId = " + attachId);
               get({
                 'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + message.id + '/attachments/' + attachId,
-                'callback': getAttachment,
+                'callback': createAttachment,
                 'callbackParams' : {
                   'activityID' : data.id,
                   'filename' : part.filename,
@@ -203,11 +239,11 @@ function getMessage(message, params) {
   });
 }
 
-function getAttachment(attachment, params) {
+function createAttachment(attachment, params) {
   chrome.storage.sync.get("civiUrl", function (obj) {
     civiUrl = obj.civiUrl;
     civiUrl.replace(/\/$/, "");// remove any trailing slash
-    console.log("civiUrl in getAttachment = " + civiUrl);
+    console.log("civiUrl in createAttachment = " + civiUrl);
 
     var formData = new FormData();
     formData.append('activityID', params.activityID);
@@ -218,8 +254,7 @@ function getAttachment(attachment, params) {
 
     $.ajax({
       type: "POST",
-      // FIXME: use a constant or config
-      url: civiUrl + '/gmail/logattachment',
+      url: civiUrl + '/gmail/logattachment?oauth_token=' + getAccessToken(),
       crossDomain: true,
       contentType: false,
       processData: false,

@@ -1,5 +1,4 @@
 var gmail;
-var serverUrl = 'https://mailchimp.vedaconsulting.co.uk/civicrm/gmail/logactivity';
 
 function refresh(f) {
   if((/in/.test(document.readyState)) || (undefined === window.Gmail) || (undefined === window.jQuery)) {
@@ -50,33 +49,34 @@ function recordActivityFromInbox(){
       var email = emailData.from_email;
       var emailSubject = emailData.subject;
       var emailBody = emailData.content_plain;
+
       // get attachments, if any
-      var emailAttachments = [];
-      if (emailData.attachments.length > 0) {
+      //var emailAttachments = [];
+      //if (emailData.attachments.length > 0) {
 
-        for (var key in emailData.attachments) {
-          // attached file name
-          var fileName = emailData.attachments[key];
+      //  for (var key in emailData.attachments) {
+      //    // attached file name
+      //    var fileName = emailData.attachments[key];
 
-          // get file source URL
-          // https://mail.google.com/mail/u/0/?ui=2&ik={ik_value}&view=att&th={message_id}&attid=0.{atachment_index}&disp=safe&zw
-          var ik = gmail.tracker.ik;
-          var id = latestEmailId;
-          var aid = key+1; // gets the first attachment
-          var fileUrl = "https://mail.google.com/mail/u/0/?ui=2&ik=" + ik + "&view=att&th=" + latestEmailId + "&attid=0." + aid + "&disp=safe&zw";
+      //    // get file source URL
+      //    // https://mail.google.com/mail/u/0/?ui=2&ik={ik_value}&view=att&th={message_id}&attid=0.{atachment_index}&disp=safe&zw
+      //    var ik = gmail.tracker.ik;
+      //    var id = latestEmailId;
+      //    var aid = key+1; // gets the first attachment
+      //    var fileUrl = "https://mail.google.com/mail/u/0/?ui=2&ik=" + ik + "&view=att&th=" + latestEmailId + "&attid=0." + aid + "&disp=safe&zw";
 
-          // attached file object
-          var attachedFile = {name:fileName, url:fileUrl};
+      //    // attached file object
+      //    var attachedFile = {name:fileName, url:fileUrl};
 
-          // push attachedFile into emailAttachment array
-          emailAttachments.push(attachedFile);
+      //    // push attachedFile into emailAttachment array
+      //    emailAttachments.push(attachedFile);
 
-        }
-
-      }
+      //  }
+      //}
       // call log activity API
-      var params = {email_id: latestEmailId, email: email, subject: emailSubject, email_body: emailBody, email_attachment: emailAttachments};
-      callLogActivityAPI(params);
+      var params = {email_id: latestEmailId, email: email, subject: emailSubject, email_body: emailBody};
+      //callLogActivityAPI(params);
+      document.dispatchEvent(new CustomEvent('content_civiurl', {detail: params}));
     }
   } else{
     // if no emails selected, instruct to select one
@@ -103,42 +103,22 @@ function recordActivityOnEmailsent(url, body, data, response, xhr){
     // therefore, proceeding only if it is not empty
     if (emailAddresses[i] != '') {
       // call log activity api in civi
-      callLogActivityAPI(emailAddresses[i], emailSubject, emailBody, emailAttachments);
+      var params = {email_id: '', email : emailAddresses[i], subject: emailSubject, email_body: emailBody};
+      callLogActivityAPI(params);
     }
   }
 }
 
-// Function to make initial API request with the email address
-function callLogActivityAPI(params){
-
-  // if empty email address
-  if (params.email == '') {
-    console.log('email address not found');
-    return;
-  }
-
-  console.log('params in call log activity api', params);
-  console.log('making api call . . .');
-  $.ajax({
-    method: 'GET',
-    url: serverUrl,
-    data: params,
-    dataType: "text",
-    crossDomain: true,
-    success: function (data, textStatus ) {
-      // return Parsed data
-      result = JSON.parse(data);
-      callActivityConfirmation(result, params);
-    },
-    error: function(xhr, textStatus, errorThrown){
-      console.log('error test', xhr);
-      return;
-    }
-  });
-}
+// Event listener for event raised in content
+document.addEventListener('page_civiurl', function(e) {
+  callActivityConfirmation(e.detail.result, e.detail.params);
+});
 
 // Process HTTP response and call relevant confirmation screens
 function callActivityConfirmation(result, params){
+  console.log("callActivityConfirmation");
+  console.log(result);
+  console.log(params);
 
   // Display error message and exit, if any
   if (result.is_error) {
@@ -234,7 +214,6 @@ function activityConfirmationScreen(params){
     params['email_body'] = $('textarea[name="email_body"]').val();
     console.log('creating activity', params);
 
-    params.action = 'gmailapi';
     document.dispatchEvent(new CustomEvent('content_gmailapi', {detail: params}));
 
     // remove model window on Click OK
@@ -254,26 +233,4 @@ function displayErrorMessage(errorMessage){
 function reConnect() {
   //detail could be used to pass more info
   document.dispatchEvent(new CustomEvent('content_reconnect', {detail: {'action' : 'reconnect'}}));
-}
-
-// TEST Function to use instead of email sent
-function testfunc(){
-
-  //  hardcoded for testing
-  // var emailAddresses = ["Gopi Krishna <gopigmail1@vedaconsulting.co.uk>", "gopigmail2@vedaconsulting.co.uk", ""];
-  var emailAddresses = ["Gopi Krishna <gopigmail4@vedaconsulting.co.uk>", ""];
-
-  var emailSubject = 'new contact ';
-  var emailBody = 'sample email body for new contact';
-  var emailAttachments = [];
-
-
-  for (var i = 0; i < emailAddresses.length; i++) {
-    console.log('single email address ', emailAddresses[i]);
-    // email sent action returns empty values in To emails array
-    if (emailAddresses[i] != '') {
-      // call log activity api in civi
-      callLogActivityAPI(emailAddresses[i], emailSubject, emailBody, emailAttachments);
-    }
-  }
 }

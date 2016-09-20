@@ -32,7 +32,7 @@ document.addEventListener('content_reconnect', function(e) {
 // listen to background
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
-    if (request.action == "post_webauthflow") {
+    if (request.action == "content_webauthflow") {
       var token;
       token = request.token;
       if (token) {
@@ -41,11 +41,25 @@ chrome.runtime.onMessage.addListener(
         $('div.coge_bttn_container > div').text('Connect Outlook');
       }
     }
+    if (request.action == "content_civiurl") {
+      //callActivityConfirmation(request.result, request.params);
+      document.dispatchEvent(new CustomEvent('page_civiurl', {detail: request}));
+    }
   }
 );
 
 // Event listener for page
 document.addEventListener('content_gmailapi', function(e) {
+  e.detail.action = 'gmailapi';
+  // send message to background
+  chrome.runtime.sendMessage(e.detail, function(response) {
+    console.log(response);
+  });
+});
+
+// Event listener for page
+document.addEventListener('content_civiurl', function(e) {
+  e.detail.action = 'civiurl';
   // send message to background
   chrome.runtime.sendMessage(e.detail, function(response) {
     console.log(response);
