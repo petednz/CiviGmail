@@ -21,9 +21,9 @@ function restore_options() {
   // Use default value color = 'red' and likesColor = true.
   chrome.storage.sync.get({
     //civiUrl: 'https://example.org/civicrm',
-    civiUrl: 'https://mailchimp.vedaconsulting.co.uk/civicrm/gmail',
+    civiUrl: 'https://mailchimp.vedaconsulting.co.uk/civicrm',
     //civioAuthUrl: 'https://example.org/oauth2/authorize'
-    civioAuthUrl: 'https://mailchimp.vedaconsulting.co.uk/oauth2/authorize?'
+    civioAuthUrl: 'https://mailchimp.vedaconsulting.co.uk/oauth2/authorize'
   }, function(items) {
     document.getElementById('civiUrl').value = items.civiUrl;
     document.getElementById('civioAuthUrl').value = items.civioAuthUrl;

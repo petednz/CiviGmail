@@ -12,12 +12,11 @@ p.src = chrome.extension.getURL('page.js');
 
 // Event listener for page
 document.addEventListener('content_reconnect', function(e) {
-  var action = e.detail.action;
   // fixme: could use some class than label
-  buttonLabel = $('div.coge_bttn_container > div').text();
+  e.detail.button = $('div.coge_bttn_container > div').text();
 
   // send message to background
-  chrome.runtime.sendMessage({'action': action, 'button': buttonLabel}, function(response) {
+  chrome.runtime.sendMessage(e.detail, function(response) {
     var token;
     token = response.token;
     if (token === true) {

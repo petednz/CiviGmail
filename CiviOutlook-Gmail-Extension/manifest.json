@@ -8,17 +8,14 @@
   },
   "permissions": [
     "identity",
-    "https://mailchimp.vedaconsulting.co.uk/*",
-    "http://mailchimp.vedaconsulting.co.uk/*",
-    "https://*.google.com/*",
-    "https://www.googleapis.com/*"
+    "https://apis.google.com/*",// for client.js
+    "storage" // for options storage
   ],
+  "options_page": "options.html",
   "oauth2": {
     "client_id": "721138563269-4s8dv4crl8869lfkgqrb51mj77u77ojc.apps.googleusercontent.com",
     "scopes": [
-       "https://www.googleapis.com/auth/gmail.readonly",
-       "https://www.googleapis.com/auth/gmail.modify",
-       "https://mail.google.com"
+       "https://www.googleapis.com/auth/gmail.readonly"
     ]
   },
   "externally_connectable": {
