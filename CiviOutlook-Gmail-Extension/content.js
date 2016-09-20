@@ -12,12 +12,11 @@ p.src = chrome.extension.getURL('page.js');
 
 // Event listener for page
 document.addEventListener('content_reconnect', function(e) {
-  var action = e.detail.action;
   // fixme: could use some class than label
-  buttonLabel = $('div.coge_bttn_container > div').text();
+  e.detail.button = $('div.coge_bttn_container > div').text();
 
   // send message to background
-  chrome.runtime.sendMessage({'action': action, 'button': buttonLabel}, function(response) {
+  chrome.runtime.sendMessage(e.detail, function(response) {
     var token;
     token = response.token;
     if (token === true) {
@@ -33,7 +32,7 @@ document.addEventListener('content_reconnect', function(e) {
 // listen to background
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
-    if (request.action == "post_webauthflow") {
+    if (request.action == "content_webauthflow") {
       var token;
       token = request.token;
       if (token) {
@@ -42,5 +41,27 @@ chrome.runtime.onMessage.addListener(
         $('div.coge_bttn_container > div').text('Connect Outlook');
       }
     }
+    if (request.action == "content_civiurl") {
+      //callActivityConfirmation(request.result, request.params);
+      document.dispatchEvent(new CustomEvent('page_civiurl', {detail: request}));
+    }
   }
 );
+
+// Event listener for page
+document.addEventListener('content_gmailapi', function(e) {
+  e.detail.action = 'gmailapi';
+  // send message to background
+  chrome.runtime.sendMessage(e.detail, function(response) {
+    console.log(response);
+  });
+});
+
+// Event listener for page
+document.addEventListener('content_civiurl', function(e) {
+  e.detail.action = 'civiurl';
+  // send message to background
+  chrome.runtime.sendMessage(e.detail, function(response) {
+    console.log(response);
+  });
+});
