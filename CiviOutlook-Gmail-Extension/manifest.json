@@ -10,8 +10,8 @@
   },
   "permissions": [
     "identity",
-    "https://apis.google.com/*",// for client.js
-    "storage" // for options storage
+    "https://apis.google.com/*",
+    "storage"
   ],
   "options_page": "options.html",
   "oauth2": {
