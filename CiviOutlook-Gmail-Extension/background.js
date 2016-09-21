@@ -1,8 +1,7 @@
 var civioConfig = {
-  CLIENT_ID: "client123id",
-  CLIENT_SECRET: "client123id",
-  SCOPE: 'gmail_extension',
-  REDIRECT_URI: 'https://oocdkbejkcafojlbdpkpmffejenhpkfb.chromiumapp.org/', // fixme: auto generate it
+  CLIENT_ID: "721138563269-4s8dv4crl8869lfkgqrb51mj77u77ojc.apps.googleusercontent.com",
+  CLIENT_SECRET: "228ffe6c8b4e_4681d6c869_f8bbf6cd43",
+  SCOPE: 'gmail_civi_extension',
 }
 var ACCESS_TOKEN_PREFIX = '#access_token=';
 var ACCESS_TOKEN_STORAGE_KEY = 'outlook-access-token';
@@ -38,7 +37,7 @@ launchAuthorizer = function() {
     oauthUrl = civioAuthUrl + '?' + $.param({
       "client_id": civioConfig.CLIENT_ID,
       "scope": civioConfig.SCOPE,
-      "redirect_uri": civioConfig.REDIRECT_URI,
+      "redirect_uri": 'https://' + chrome.runtime.id + '.chromiumapp.org/',
       "response_type":"token",
       "state" : 'null',
       "access_type":"offline",
