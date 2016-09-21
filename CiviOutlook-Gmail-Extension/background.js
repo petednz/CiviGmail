@@ -146,7 +146,8 @@ chrome.runtime.onMessage.addListener(
           'callbackParams' : request,
         });
       } else {
-        console.log('message id not known.');
+        console.log('Message id not known. Filing activity based on params.');
+        createActivity({}, request);
       }
     }
     else if (request.action == "civiurl") {
@@ -213,24 +214,26 @@ function createActivity(message, params) {
         console.log("activity posted with..");
         console.log(data);
         console.log(textStatus);
-        if (data.id) {
+        if (data.id && !$.isEmptyObject(message)) {
           // FIXME: move to function
           var parts = message.payload.parts;
           //var params.attachment = [];
-          for (var i = 0; i < parts.length; i++) {
-            var part = parts[i];
-            if (part.filename && part.filename.length > 0) {
-              var attachId = part.body.attachmentId;
-              console.log("attachId = " + attachId);
-              get({
-                'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + message.id + '/attachments/' + attachId,
-                'callback': createAttachment,
-                'callbackParams' : {
-                  'activityID' : data.id,
-                  'filename' : part.filename,
-                  'mimetype' : part.mimeType
-                }
-              });
+          if (!$.isEmptyObject(parts)) { 
+            for (var i = 0; i < parts.length; i++) {
+              var part = parts[i];
+              if (part.filename && part.filename.length > 0) {
+                var attachId = part.body.attachmentId;
+                console.log("attachId = " + attachId);
+                get({
+                  'url': 'https://www.googleapis.com/gmail/v1/users/me/messages/' + message.id + '/attachments/' + attachId,
+                  'callback': createAttachment,
+                  'callbackParams' : {
+                    'activityID' : data.id,
+                    'filename' : part.filename,
+                    'mimetype' : part.mimeType
+                  }
+                });
+              }
             }
           }
         }

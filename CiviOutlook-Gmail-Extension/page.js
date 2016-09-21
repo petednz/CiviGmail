@@ -75,7 +75,6 @@ function recordActivityFromInbox(){
       //}
       // call log activity API
       var params = {email_id: latestEmailId, email: email, subject: emailSubject, email_body: emailBody};
-      //callLogActivityAPI(params);
       document.dispatchEvent(new CustomEvent('content_civiurl', {detail: params}));
     }
   } else{
@@ -104,7 +103,7 @@ function recordActivityOnEmailsent(url, body, data, response, xhr){
     if (emailAddresses[i] != '') {
       // call log activity api in civi
       var params = {email_id: '', email : emailAddresses[i], subject: emailSubject, email_body: emailBody};
-      callLogActivityAPI(params);
+      document.dispatchEvent(new CustomEvent('content_civiurl', {detail: params}));
     }
   }
 }
