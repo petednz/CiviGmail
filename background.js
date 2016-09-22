@@ -1,6 +1,4 @@
 var civioConfig = {
-  CLIENT_ID: "721138563269-4s8dv4crl8869lfkgqrb51mj77u77ojc.apps.googleusercontent.com",
-  CLIENT_SECRET: "228ffe6c8b4e_4681d6c869_f8bbf6cd43",
   SCOPE: 'gmail_civi_extension',
 }
 var ACCESS_TOKEN_PREFIX = '#access_token=';
@@ -27,7 +25,7 @@ var getAccessToken = function() {
 var clearAccessToken = function() {
   localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
 }
-var setStatusMessage = function(message, time = 8000) {
+var setStatusMessage = function(message, time = 10000) {
   chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
     chrome.tabs.sendMessage(tabs[0].id, {action: 'content_setstatus', message : message, time : time}, function(response) {});
   });
@@ -41,10 +39,13 @@ var informButtons = function(token) {
 }
 
 launchAuthorizer = function() {
-  chrome.storage.sync.get("civioAuthUrl", function (obj) {
-    civioAuthUrl = obj.civioAuthUrl;
-    if ($.isEmptyObject(civioAuthUrl)) { 
-      setStatusMessage('CiviCRM OAuth URL not configured or known. Check options for installed CiviGmail extension.');
+  chrome.storage.sync.get(["civioAuthUrl", "civioAuthSec", "civiUrl"], function (obj) {
+    console.log("obj");
+    console.log(obj);
+    var civioAuthUrl = obj.civioAuthUrl;
+    var civioAuthSec = obj.civioAuthSec;
+    if ($.isEmptyObject(civioAuthUrl) || $.isEmptyObject(civioAuthSec)) { 
+      setStatusMessage('OAuth URL or Secret not configured or known. Check options for installed CiviGmail extension.');
       informButtons(false);
       return false;
     }
@@ -52,7 +53,8 @@ launchAuthorizer = function() {
     console.log("civioAuthUrl in launchAuthorizer = " + civioAuthUrl);
     console.log("Trying to login for oauth.");
     oauthUrl = civioAuthUrl + '?' + $.param({
-      "client_id": civioConfig.CLIENT_ID,
+      "client_id": chrome.runtime.id,
+      "client_secret": civioAuthSec,
       "scope": civioConfig.SCOPE,
       "redirect_uri": 'https://' + chrome.runtime.id + '.chromiumapp.org/',
       "response_type":"token",
@@ -66,7 +68,7 @@ launchAuthorizer = function() {
       function(code) {
         console.log('auth code= ' + code);
         if (typeof code == 'undefined') {
-          setStatusMessage('Authorization failed to launch. Something wrong with OAuth configs at civi site.');
+          setStatusMessage('Authorization failed to launch. Something wrong with OAuth configs at ' + (obj.civiUrl ? obj.civiUrl : 'civicrm site') + '. Possible issues - client id / secret / scope.');
           informButtons(false);
         } else {
           var accessTokenStart = code.indexOf(ACCESS_TOKEN_PREFIX);
