@@ -1,11 +1,11 @@
 var civioConfig = {
-  SCOPE: 'gmail_civi_extension',
+  SCOPE: 'civigmail_extension',
 }
 var ACCESS_TOKEN_PREFIX = '#access_token=';
-var ACCESS_TOKEN_STORAGE_KEY = 'outlook-access-token';
+var ACCESS_TOKEN_STORAGE_KEY = 'gmail-access-token';
 
 var gapioConfig = {
-  CLIENT_ID: '721138563269-4s8dv4crl8869lfkgqrb51mj77u77ojc.apps.googleusercontent.com',
+  CLIENT_ID: '1068079364088-hhbgj9mtqsv731qj973q9qo7jhpuhtsr.apps.googleusercontent.com',
   SCOPE: [
     'https://www.googleapis.com/auth/gmail.readonly'
   ],
@@ -26,6 +26,7 @@ var clearAccessToken = function() {
   localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
 }
 var setStatusMessage = function(message, time = 10000) {
+  console.log(message);
   chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
     chrome.tabs.sendMessage(tabs[0].id, {action: 'content_setstatus', message : message, time : time}, function(response) {});
   });
@@ -39,6 +40,7 @@ var informButtons = function(token) {
 }
 
 launchAuthorizer = function() {
+  setStatusMessage('Launching OAuth for Civi..');
   chrome.storage.sync.get(["civioAuthUrl", "civioAuthSec", "civiUrl"], function (obj) {
     console.log("obj");
     console.log(obj);
@@ -81,6 +83,7 @@ launchAuthorizer = function() {
             setAccessToken(accessToken);
             informButtons(accessToken);
             console.log(accessToken);
+            setStatusMessage('OAuthorization Successful.');
           }
         }
       }
@@ -175,17 +178,29 @@ chrome.runtime.onMessage.addListener(
 );
 
 function checkContactExists(request) {
+  console.log("checkcontactexists request");
+  console.log(request);
   // if empty email address
   if (request.email == '') {
-    console.log('email address not found');
-    return;
+    setStatusMessage('Email address not found');
+    return false;
   }
   chrome.storage.sync.get("civiUrl", function (obj) {
+    var token = getAccessToken();
+    if (!token) {
+      setStatusMessage('Not authorized yet. Try "Connect Civi" first.');
+      return false;
+    }
     civiUrl = obj.civiUrl;
+    if ($.isEmptyObject(civiUrl)) { 
+      setStatusMessage('CiviCRM URL not configured or known. Check options for installed CiviGmail extension.');
+      return false;
+    }
     civiUrl.replace(/\/$/, "");// remove any trailing slash
     console.log("civiUrl in action:civiurl = " + civiUrl);
     console.log('request in checkContactExists', request);
 
+    setStatusMessage('Checking contacts in civi for "' + request.subject + '"');
     $.ajax({
       method: 'GET',
       url: civiUrl + '/gmail/logactivity?oauth_token=' + getAccessToken(),
@@ -194,6 +209,10 @@ function checkContactExists(request) {
       crossDomain: true,
       success: function (data, textStatus ) {
         result = JSON.parse(data);
+        if (result.is_error) {
+          setStatusMessage('Error during contact check for "' + request.subject + '" - ' + result.error_message);
+        }
+
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
           // DS: if you receive this error : the error Error in response to tabs.query: TypeError: Cannot read property 'id' of undefined
           // try close dev consoles
@@ -201,15 +220,18 @@ function checkContactExists(request) {
         });
       },
       error: function(xhr, textStatus, errorThrown){
+        setStatusMessage('Something went wrong during contact check for "' + request.subject + '"');
         console.log('error test', xhr);
-        return;
+        return false;
       }
     });
   });
+  return true;
 }
 
 function createActivity(message, params) {
   chrome.storage.sync.get("civiUrl", function (obj) {
+    setStatusMessage('Creating activity for "' + params.subject + '" ..');
     civiUrl = obj.civiUrl;
     civiUrl.replace(/\/$/, "");// remove any trailing slash
     console.log("civiUrl in createActivity = " + civiUrl);
@@ -233,6 +255,7 @@ function createActivity(message, params) {
         console.log(data);
         console.log(textStatus);
         if (data.id && !$.isEmptyObject(message)) {
+          setStatusMessage('Activity created for "' + params.subject + '"');
           // FIXME: move to function
           var parts = message.payload.parts;
           //var params.attachment = [];
@@ -247,6 +270,7 @@ function createActivity(message, params) {
                   'callback': createAttachment,
                   'callbackParams' : {
                     'activityID' : data.id,
+                    'subject'  : params.subject,
                     'filename' : part.filename,
                     'mimetype' : part.mimeType
                   }
@@ -262,6 +286,7 @@ function createActivity(message, params) {
 
 function createAttachment(attachment, params) {
   chrome.storage.sync.get("civiUrl", function (obj) {
+    setStatusMessage('Uploading activity attachment for "' + params.subject + '" - ' + params.filename);
     civiUrl = obj.civiUrl;
     civiUrl.replace(/\/$/, "");// remove any trailing slash
     console.log("civiUrl in createAttachment = " + civiUrl);
@@ -281,6 +306,7 @@ function createAttachment(attachment, params) {
       processData: false,
       data: formData,
       success: function (data, textStatus ) {
+        setStatusMessage('Uploaded activity attachment for "' + params.subject + '" - ' + params.filename);
         // FIXME: inform user of any failures
         console.log(textStatus);
       },
@@ -309,9 +335,10 @@ function get(options) {
   // Set standard Google APIs authentication header.
   var gapiToken = localStorage[GAPI_ACCESS_TOKEN];
   if (!gapiToken || 0 === gapiToken.length) {
-    console.log('Google API Token not known.');
+    console.log('Google API Token not known. Can\'t make call to ' + options.url);
   }
   xhr.setRequestHeader('Authorization', 'Bearer ' + gapiToken);
+  //xhr.setRequestHeader('Authorization', 'Bearer ' + session.access_token);
   console.log("xhr call: " + options.url)
   xhr.send();
 }
