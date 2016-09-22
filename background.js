@@ -27,10 +27,27 @@ var getAccessToken = function() {
 var clearAccessToken = function() {
   localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
 }
+var setStatusMessage = function(message, time = 8000) {
+  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+    chrome.tabs.sendMessage(tabs[0].id, {action: 'content_setstatus', message : message, time : time}, function(response) {});
+  });
+}
+var informButtons = function(token) {
+  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+    // DS: if you receive this error : the error Error in response to tabs.query: TypeError: Cannot read property 'id' of undefined
+    // try close dev consoles
+    chrome.tabs.sendMessage(tabs[0].id, {action: 'content_resetbuttons', token: token}, function(response) {});
+  });
+}
 
 launchAuthorizer = function() {
   chrome.storage.sync.get("civioAuthUrl", function (obj) {
     civioAuthUrl = obj.civioAuthUrl;
+    if ($.isEmptyObject(civioAuthUrl)) { 
+      setStatusMessage('CiviCRM OAuth URL not configured or known. Check options for installed CiviGmail extension.');
+      informButtons(false);
+      return false;
+    }
     civioAuthUrl.replace(/\/$/, "");// remove any trailing slash
     console.log("civioAuthUrl in launchAuthorizer = " + civioAuthUrl);
     console.log("Trying to login for oauth.");
@@ -41,7 +58,6 @@ launchAuthorizer = function() {
       "response_type":"token",
       "state" : 'null',
       "access_type":"offline",
-      "login_hint":'welldeepak@gmail.com',
       "prompt":"consent"
     });
     console.log("oauthUrl = " + oauthUrl);
@@ -49,21 +65,22 @@ launchAuthorizer = function() {
       {"url": oauthUrl, "interactive": true},
       function(code) {
         console.log('auth code= ' + code);
-        var accessTokenStart = code.indexOf(ACCESS_TOKEN_PREFIX);
-        if (accessTokenStart < 0) {
-          console.log('Unexpected code: ' + code);
-          accessToken = false;//false
+        if (typeof code == 'undefined') {
+          setStatusMessage('Authorization failed to launch. Something wrong with OAuth configs at civi site.');
+          informButtons(false);
         } else {
-          var accessToken = code.substring(accessTokenStart + ACCESS_TOKEN_PREFIX.length);
-          setAccessToken(accessToken);
+          var accessTokenStart = code.indexOf(ACCESS_TOKEN_PREFIX);
+          if (accessTokenStart < 0) {
+            console.log('Unexpected code: ' + code);
+            setStatusMessage('Authorization failed with error url "' + code + '"', 12000);
+            informButtons(false);
+          } else {
+            var accessToken = code.substring(accessTokenStart + ACCESS_TOKEN_PREFIX.length);
+            setAccessToken(accessToken);
+            informButtons(accessToken);
+            console.log(accessToken);
+          }
         }
-        console.log('access token= ' + accessToken);
-        // send message to content
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-          // DS: if you receive this error : the error Error in response to tabs.query: TypeError: Cannot read property 'id' of undefined
-          // try close dev consoles
-          chrome.tabs.sendMessage(tabs[0].id, {action: 'content_webauthflow',token: accessToken}, function(response) {});
-        });
       }
     );
   });
@@ -123,7 +140,7 @@ chrome.runtime.onMessage.addListener(
       console.log(request);
       var token;
       token = getAccessToken();
-      if (request.action == "reconnect" && request.button == 'Connect Outlook') {
+      if (request.action == "reconnect" && request.button == 'Connect Civi') {
         if (!token) {
           launchAuthorizer();
           // sendresponse assuming successfull. Post launch content would be notified anyway
@@ -131,7 +148,7 @@ chrome.runtime.onMessage.addListener(
         } else {
           sendResponse({'token': token});
         }
-      } else if (request.action == "reconnect" && request.button == 'Disconnect Outlook') {
+      } else if (request.action == "reconnect" && request.button == 'Disconnect Civi') {
         clearAccessToken();
         token = getAccessToken();
         sendResponse({'token': token});

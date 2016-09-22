@@ -12,7 +12,7 @@ function refresh(f) {
 
 var main = function() {
   gmail = new Gmail();
-  bttn = gmail.tools.add_toolbar_button('Connect Outlook' , reConnect);
+  bttn = gmail.tools.add_toolbar_button('Connect Civi' , reConnect);
   bttn.addClass('coge_bttn_container');
 
   $userEmail = gmail.get.user_email();
@@ -111,6 +111,11 @@ function recordActivityOnEmailsent(url, body, data, response, xhr){
 // Event listener for event raised in content
 document.addEventListener('page_civiurl', function(e) {
   callActivityConfirmation(e.detail.result, e.detail.params);
+});
+
+// Event listener for event raised in content
+document.addEventListener('page_setstatus', function(e) {
+  gmail.tools.infobox(e.detail.message, e.detail.time);
 });
 
 // Process HTTP response and call relevant confirmation screens

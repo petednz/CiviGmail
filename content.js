@@ -10,6 +10,16 @@ var p = document.createElement('script');
 p.src = chrome.extension.getURL('page.js');
 (document.head || document.documentElement).appendChild(p);
 
+var resetButtons = function(token) {
+  if (token === true) {
+    $('div.coge_bttn_container > div').text('Connecting..');
+  } else if (token) {
+    $('div.coge_bttn_container > div').text('Disconnect Civi');
+  } else {
+    $('div.coge_bttn_container > div').text('Connect Civi');
+  }
+}
+
 // Event listener for page
 document.addEventListener('content_reconnect', function(e) {
   // fixme: could use some class than label
@@ -17,33 +27,23 @@ document.addEventListener('content_reconnect', function(e) {
 
   // send message to background
   chrome.runtime.sendMessage(e.detail, function(response) {
-    var token;
-    token = response.token;
-    if (token === true) {
-      $('div.coge_bttn_container > div').text('Connecting..');
-    } else if (token) {
-      $('div.coge_bttn_container > div').text('Disconnect Outlook');
-    } else {
-      $('div.coge_bttn_container > div').text('Connect Outlook');
-    }
+    var token = response.token;
+    resetButtons(token);
   });
 });
 
 // listen to background
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
-    if (request.action == "content_webauthflow") {
-      var token;
-      token = request.token;
-      if (token) {
-        $('div.coge_bttn_container > div').text('Disconnect Outlook');
-      } else {
-        $('div.coge_bttn_container > div').text('Connect Outlook');
-      }
+    if (request.action == "content_resetbuttons") {
+      var token = request.token;
+      resetButtons(token);
     }
     if (request.action == "content_civiurl") {
-      //callActivityConfirmation(request.result, request.params);
       document.dispatchEvent(new CustomEvent('page_civiurl', {detail: request}));
+    }
+    if (request.action == "content_setstatus") {
+      document.dispatchEvent(new CustomEvent('page_setstatus', {detail : request}));
     }
   }
 );
