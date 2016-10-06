@@ -32,6 +32,32 @@ function recordActivityFromInbox(){
   var selectedEmailsData = gmail.get.selected_emails_data();
   console.log('selectedEmailsData', selectedEmailsData);
 
+  var counter = 0;
+  if (selectedEmailsData.length > 0) {
+    counter = selectedEmailsData.length;
+    console.log("selectedEmailsData.length=" + selectedEmailsData.length);
+    for (var i = 0; i < selectedEmailsData.length; i++) {
+      var latestEmailId = selectedEmailsData[i].last_email;
+
+      // get the email data of the last email from the thread
+      for(var key in selectedEmailsData[i].threads){
+        if (key == latestEmailId) {
+          var emailData = selectedEmailsData[i].threads[key];
+        }
+      }
+      if (emailData.attachments.length > 0) {
+        for (var key in emailData.attachments) {
+          if (emailData.attachments[key] !== "") {
+            counter++;
+          }
+        //console.log(emailData.attachments);
+        //counter = counter + emailData.attachments.length;
+        //console.log("emailData.attachments.length=" + emailData.attachments.length);
+        }
+      }
+    }
+  }
+  console.log("counter=" + counter);
   if (selectedEmailsData.length > 0) {
     for (var i = 0; i < selectedEmailsData.length; i++) {
       console.log('selectedEmailsData[i]', selectedEmailsData[i]);
@@ -74,7 +100,7 @@ function recordActivityFromInbox(){
       //  }
       //}
       // call log activity API
-      var params = {email_id: latestEmailId, email: email, subject: emailSubject, email_body: emailBody};
+      var params = {email_id: latestEmailId, email: email, subject: emailSubject, email_body: emailBody, count: i+1, total: counter};
       document.dispatchEvent(new CustomEvent('content_civiurl', {detail: params}));
     }
   } else{
@@ -190,39 +216,39 @@ function displayDuplicateContacts(selectForm, params){
 
 // Function to Display Activity Confirmation screen
 function activityConfirmationScreen(params){
-  console.log('displaying confirmation screen ', params);
-  var formCSS = '<style>'
-  +'.gopi{color:red;}'
-  +'div{margin-top:5px;}'
-  +'</style>'
-  ;
+  //console.log('displaying confirmation screen ', params);
+  //var formCSS = '<style>'
+  //+'.gopi{color:red;}'
+  //+'div{margin-top:5px;}'
+  //+'</style>'
+  //;
 
-  var confirmationForm = '<form>'
-  +'<div>Subject:</div>'
-  +'<textarea name="subject" rows="1" cols="50">'
-  + params.subject
-  +'</textarea>'
-  +'<div>Details:</div>'
-  +'<textarea name="email_body" rows="10" cols="50">'
-  + params.email_body
-  +'</textarea>'
-  +'<br><br>'
-  +'</form>'
-  ;
+  //var confirmationForm = '<form>'
+  //+'<div>Subject:</div>'
+  //+'<textarea name="subject" rows="1" cols="50">'
+  //+ params.subject
+  //+'</textarea>'
+  //+'<div>Details:</div>'
+  //+'<textarea name="email_body" rows="10" cols="50">'
+  //+ params.email_body
+  //+'</textarea>'
+  //+'<br><br>'
+  //+'</form>'
+  //;
 
-  var formHtml = formCSS+confirmationForm;
+  //var formHtml = formCSS+confirmationForm;
 
-  gmail.tools.add_modal_window('Create Activity', formHtml, function(){
-    // assign form submitted values to params
-    params['subject'] = $('textarea[name="subject"]').val();
-    params['email_body'] = $('textarea[name="email_body"]').val();
+  //gmail.tools.add_modal_window('Create Activity', formHtml, function(){
+  //  // assign form submitted values to params
+  //  params['subject'] = $('textarea[name="subject"]').val();
+  //  params['email_body'] = $('textarea[name="email_body"]').val();
     console.log('creating activity', params);
 
     document.dispatchEvent(new CustomEvent('content_gmailapi', {detail: params}));
 
-    // remove model window on Click OK
-    gmail.tools.remove_modal_window();
-  });
+  //  // remove model window on Click OK
+  //  gmail.tools.remove_modal_window();
+  //});
 }
 
 // Function to display Error message

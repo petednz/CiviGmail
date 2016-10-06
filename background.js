@@ -11,6 +11,10 @@ var gapioConfig = {
   ],
 }
 var GAPI_ACCESS_TOKEN = 'gapi-token';
+var CG_COUNTER_TOTAL  = 'cg-counter-total';
+var GC_COUNTER_PROGRESS = 'cg-counter-progress';
+localStorage[CG_COUNTER_TOTAL] = 0;
+localStorage[GC_COUNTER_PROGRESS] = 0;
 
 // DS FIXME: if we use chrome storage https://developer.chrome.com/extensions/storage#property-sync
 // extension's content scripts can directly access user data without the need for a background page.
@@ -25,11 +29,18 @@ var getAccessToken = function() {
 var clearAccessToken = function() {
   localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
 }
-var setStatusMessage = function(message, time = 10000) {
+var setStatusMessage = function(message, showProgress = false, time = 10000) {
   console.log(message);
+  if (showProgress) {
+    var progress = getOverallProgress();
+    message = progress + '% ' + message;
+  }
   chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
     chrome.tabs.sendMessage(tabs[0].id, {action: 'content_setstatus', message : message, time : time}, function(response) {});
   });
+  if (showProgress && progress == 100) {
+    setTimeout(function() { setStatusMessage('Done uploading to CiviCRM.'); }, 2000);
+  }
 }
 var informButtons = function(token) {
   chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
@@ -37,6 +48,27 @@ var informButtons = function(token) {
     // try close dev consoles
     chrome.tabs.sendMessage(tabs[0].id, {action: 'content_resetbuttons', token: token}, function(response) {});
   });
+}
+
+function setCounterTotal(total) {
+  localStorage[CG_COUNTER_TOTAL] = total;
+  localStorage[GC_COUNTER_PROGRESS] = 0;
+}
+function getCounterTotal() {
+  return localStorage[CG_COUNTER_TOTAL];
+}
+function setCounterProgress() {
+  localStorage[GC_COUNTER_PROGRESS]++;
+}
+function getCounterProgress() {
+  return localStorage[GC_COUNTER_PROGRESS];
+}
+function getOverallProgress() {
+  var progress = 0;
+  if (getCounterProgress() > 0 && getCounterTotal() > 0) {
+    progress = parseFloat(parseInt(getCounterProgress()) / parseInt(getCounterTotal())) * 100;
+  }
+  return progress;
 }
 
 launchAuthorizer = function() {
@@ -200,9 +232,12 @@ function checkContactExists(request) {
     console.log("civiUrl in action:civiurl = " + civiUrl);
     console.log('request in checkContactExists', request);
 
-    setStatusMessage('Checking contacts in civi for "' + request.subject + '"');
+    setStatusMessage('Checking contacts in civi for "' + request.subject + '"', true);
+    if (request.count == 1) {
+      setCounterTotal(request.total);
+    }
     $.ajax({
-      method: 'GET',
+      method: 'POST',
       url: civiUrl + '/gmail/logactivity?oauth_token=' + getAccessToken(),
       data: request,
       dataType: "text",
@@ -231,7 +266,7 @@ function checkContactExists(request) {
 
 function createActivity(message, params) {
   chrome.storage.sync.get("civiUrl", function (obj) {
-    setStatusMessage('Creating activity for "' + params.subject + '" ..');
+    setStatusMessage('Creating activity for "' + params.subject + '" ..', true);
     civiUrl = obj.civiUrl;
     civiUrl.replace(/\/$/, "");// remove any trailing slash
     console.log("civiUrl in createActivity = " + civiUrl);
@@ -255,7 +290,8 @@ function createActivity(message, params) {
         console.log(data);
         console.log(textStatus);
         if (data.id && !$.isEmptyObject(message)) {
-          setStatusMessage('Activity created for "' + params.subject + '"');
+          setCounterProgress();
+          setStatusMessage('Activity created for "' + params.subject + '"', true);
           // FIXME: move to function
           var parts = message.payload.parts;
           //var params.attachment = [];
@@ -286,7 +322,7 @@ function createActivity(message, params) {
 
 function createAttachment(attachment, params) {
   chrome.storage.sync.get("civiUrl", function (obj) {
-    setStatusMessage('Uploading activity attachment for "' + params.subject + '" - ' + params.filename);
+    setStatusMessage('Uploading activity attachment for "' + params.subject + '" - ' + params.filename, true);
     civiUrl = obj.civiUrl;
     civiUrl.replace(/\/$/, "");// remove any trailing slash
     console.log("civiUrl in createAttachment = " + civiUrl);
@@ -306,7 +342,8 @@ function createAttachment(attachment, params) {
       processData: false,
       data: formData,
       success: function (data, textStatus ) {
-        setStatusMessage('Uploaded activity attachment for "' + params.subject + '" - ' + params.filename);
+        setCounterProgress();
+        setStatusMessage('Uploaded activity attachment for "' + params.subject + '" - ' + params.filename, true);
         // FIXME: inform user of any failures
         console.log(textStatus);
       },
