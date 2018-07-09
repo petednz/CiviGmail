@@ -217,12 +217,13 @@ function checkContactExists(request) {
     setStatusMessage('Email address not found');
     return false;
   }
-  chrome.storage.sync.get("civiUrl", function (obj) {
+  chrome.storage.sync.get(["civiUrl", "civiApiKey"], function (obj) {
     var token = getAccessToken();
     if (!token) {
       setStatusMessage('Not authorized yet. Try "Connect Civi" first.');
       return false;
     }
+    request.api_key = obj.civiApiKey;
     civiUrl = obj.civiUrl;
     if ($.isEmptyObject(civiUrl)) { 
       setStatusMessage('CiviCRM URL not configured or known. Check options for installed CiviGmail extension.');
