@@ -243,7 +243,12 @@ function checkContactExists(request) {
       dataType: "text",
       crossDomain: true,
       success: function (data, textStatus ) {
-        result = JSON.parse(data);
+        try {
+          result = JSON.parse(data);
+        } catch (e) {
+          console.log(e);
+          result = { 'is_error': 1, 'message': e.message + ' (did you install all extension dependencies?)' };
+        }
         if (result.is_error) {
           setStatusMessage('Error during contact check for "' + request.subject + '" - ' + result.message);
         }
