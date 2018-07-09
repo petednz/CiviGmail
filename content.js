@@ -53,7 +53,7 @@ document.addEventListener('content_gmailapi', function(e) {
   var detail = Object.assign({ 'action': 'gmailapi' }, e.detail);
   // send message to background
   chrome.runtime.sendMessage(detail, function(response) {
-    console.log(response);
+    console.log('gmailapi response', response);
   });
 });
 
@@ -62,6 +62,6 @@ document.addEventListener('content_civiurl', function(e) {
   var detail = Object.assign({ 'action': 'civiurl' }, e.detail);
   // send message to background
   chrome.runtime.sendMessage(detail, function(response) {
-    console.log(response);
+    console.log('civiurl response', response);
   });
 });

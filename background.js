@@ -30,7 +30,7 @@ var clearAccessToken = function() {
   localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
 }
 var setStatusMessage = function(message, showProgress = false, time = 10000) {
-  console.log(message);
+  console.log('setStatusMessage', message);
   if (showProgress) {
     var progress = getOverallProgress();
     message = progress + '% ' + message;
@@ -74,8 +74,7 @@ function getOverallProgress() {
 launchAuthorizer = function() {
   setStatusMessage('Launching OAuth for Civi..');
   chrome.storage.sync.get(["civioAuthUrl", "civioAuthSec", "civiUrl"], function (obj) {
-    console.log("obj");
-    console.log(obj);
+    console.log("obj", obj);
     var civioAuthUrl = obj.civioAuthUrl;
     var civioAuthSec = obj.civioAuthSec;
     if ($.isEmptyObject(civioAuthUrl) || $.isEmptyObject(civioAuthSec)) { 
@@ -114,7 +113,7 @@ launchAuthorizer = function() {
             var accessToken = code.substring(accessTokenStart + ACCESS_TOKEN_PREFIX.length);
             setAccessToken(accessToken);
             informButtons(accessToken);
-            console.log(accessToken);
+            console.log('access token', accessToken);
             setStatusMessage('OAuthorization Successful.');
           }
         }
@@ -168,19 +167,17 @@ function authorize(){
   );
 }
 
-
 // listen from content for event raised
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
     if (request.action == "reconnect") {
-      console.log("request in listener");
-      console.log(request);
+      console.log("request in listener", request);
       var token;
       token = getAccessToken();
       if (request.action == "reconnect" && request.button == 'Connect Civi') {
         if (!token) {
           launchAuthorizer();
-          // sendresponse assuming successfull. Post launch content would be notified anyway
+          // sendresponse assuming successful. Post launch content would be notified anyway
           sendResponse({'token': true});
         } else {
           sendResponse({'token': token});
@@ -210,8 +207,7 @@ chrome.runtime.onMessage.addListener(
 );
 
 function checkContactExists(request) {
-  console.log("checkcontactexists request");
-  console.log(request);
+  console.log("checkcontactexists request", request);
   // if empty email address
   if (request.email == '') {
     setStatusMessage('Email address not found');
@@ -247,7 +243,7 @@ function checkContactExists(request) {
         try {
           result = JSON.parse(data);
         } catch (e) {
-          console.log(e);
+          console.log('JSON.parse exception: ', e);
           result = { 'is_error': 1, 'message': e.message + ' (did you install all extension dependencies?)' };
         }
         if (result.is_error) {
@@ -293,8 +289,8 @@ function createActivity(message, params) {
       data: formData,
       success: function (data, textStatus) {
         console.log("activity posted with..");
-        console.log(data);
-        console.log(textStatus);
+        console.log('create activity data', data);
+        console.log('activity textStatus', textStatus);
         if (data.id && !$.isEmptyObject(message)) {
           setCounterProgress();
           setStatusMessage('Activity created for "' + params.subject + '"', true);
@@ -338,7 +334,7 @@ function createAttachment(attachment, params) {
     formData.append('mimeType', params.mimetype);
 
     formData.append('file', new Blob([attachment.data], {type: params.mimetype}), params.filename);
-    console.log(formData);
+    console.log('formData:', formData);
 
     $.ajax({
       type: "POST",
@@ -351,7 +347,7 @@ function createAttachment(attachment, params) {
         setCounterProgress();
         setStatusMessage('Uploaded activity attachment for "' + params.subject + '" - ' + params.filename, true);
         // FIXME: inform user of any failures
-        console.log(textStatus);
+        console.log('attachment textStatus:', textStatus);
       },
     });
   });
@@ -384,5 +380,5 @@ function get(options) {
   //xhr.setRequestHeader('Authorization', 'Bearer ' + session.access_token);
   console.log("xhr call: " + options.url)
   xhr.send();
-  console.log(xhr);
+  console.log('xhr', xhr);
 }

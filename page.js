@@ -146,9 +146,7 @@ document.addEventListener('page_setstatus', function(e) {
 
 // Process HTTP response and call relevant confirmation screens
 function callActivityConfirmation(result, params){
-  console.log("callActivityConfirmation");
-  console.log(result);
-  console.log(params);
+  console.log("callActivityConfirmation", result, params);
 
   // Display error message and exit, if any
   if (result.is_error) {
