@@ -245,7 +245,7 @@ function checkContactExists(request) {
       success: function (data, textStatus ) {
         result = JSON.parse(data);
         if (result.is_error) {
-          setStatusMessage('Error during contact check for "' + request.subject + '" - ' + result.error_message);
+          setStatusMessage('Error during contact check for "' + request.subject + '" - ' + result.message);
         }
 
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {

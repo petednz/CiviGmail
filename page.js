@@ -28,7 +28,7 @@ refresh(main);
 
 // Function to record activity for selcted email
 function recordActivityFromInbox(){
-  // get slected emails data
+  // get selected emails data
   var selectedEmailsData = gmail.get.selected_emails_data();
   console.log('selectedEmailsData', selectedEmailsData);
 
@@ -106,7 +106,7 @@ function recordActivityFromInbox(){
   } else{
     // if no emails selected, instruct to select one
     console.log('no emails selected');
-    alert('select atleast one email to continue');
+    alert('select at least one email to continue');
   }
 }
 
@@ -152,7 +152,7 @@ function callActivityConfirmation(result, params){
 
   // Display error message and exit, if any
   if (result.is_error) {
-    displayErrorMessage(result.error_message);
+    displayErrorMessage(result.message);
     return;
   }
 
