@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "CiviGmail",
   "description": "Gmail Extension to communicate with CiviCRM inorder to file emails as activities in CiviCRM.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "icons": {
     "16": "icon-16.png",
     "48": "icon-48.png",
@@ -10,7 +10,8 @@
   },
   "permissions": [
     "identity",
-    "https://apis.google.com/*",
+    "https://www.apis.google.com/*",
+    "https://*/civicrm/*",
     "storage"
   ],
   "options_page": "options.html",

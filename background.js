@@ -378,4 +378,5 @@ function get(options) {
   //xhr.setRequestHeader('Authorization', 'Bearer ' + session.access_token);
   console.log("xhr call: " + options.url)
   xhr.send();
+  console.log(xhr);
 }
