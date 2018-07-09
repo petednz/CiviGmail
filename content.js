@@ -23,10 +23,10 @@ var resetButtons = function(token) {
 // Event listener for page
 document.addEventListener('content_reconnect', function(e) {
   // fixme: could use some class than label
-  e.detail.button = $('div.coge_bttn_container > div').text();
+  var detail = Object.assign({ 'button': $('div.coge_bttn_container > div').text() }, e.detail);
 
   // send message to background
-  chrome.runtime.sendMessage(e.detail, function(response) {
+  chrome.runtime.sendMessage(detail, function(response) {
     var token = response.token;
     resetButtons(token);
   });
@@ -50,18 +50,18 @@ chrome.runtime.onMessage.addListener(
 
 // Event listener for page
 document.addEventListener('content_gmailapi', function(e) {
-  e.detail.action = 'gmailapi';
+  var detail = Object.assign({ 'action': 'gmailapi' }, e.detail);
   // send message to background
-  chrome.runtime.sendMessage(e.detail, function(response) {
+  chrome.runtime.sendMessage(detail, function(response) {
     console.log(response);
   });
 });
 
 // Event listener for page
 document.addEventListener('content_civiurl', function(e) {
-  e.detail.action = 'civiurl';
+  var detail = Object.assign({ 'action': 'civiurl' }, e.detail);
   // send message to background
-  chrome.runtime.sendMessage(e.detail, function(response) {
+  chrome.runtime.sendMessage(detail, function(response) {
     console.log(response);
   });
 });
