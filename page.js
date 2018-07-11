@@ -37,9 +37,8 @@ function recordActivityFromInbox(){
   var selectedEmailsData = gmail.get.selected_emails_data();
   console.log('selectedEmailsData', selectedEmailsData);
 
-  var counter = 0;
+  var counter = selectedEmailsData.length;
   if (selectedEmailsData.length > 0) {
-    counter = selectedEmailsData.length;
     console.log("selectedEmailsData.length=" + selectedEmailsData.length);
     for (var i = 0; i < selectedEmailsData.length; i++) {
       var latestEmailId = selectedEmailsData[i].last_email;
@@ -107,9 +106,9 @@ function recordActivityFromInbox(){
       // Call log activity API using the name and email address of every person on the email (excluding us)
       var otherPeople = selectedEmailsData[i].people_involved.filter(p => p[1] !== userEmail);
       console.log('Persons on email: ', otherPeople);
-      for (var i = 0; i < otherPeople.length; i++) {
-        var name = otherPeople[i][0];
-        var email = otherPeople[i][1];
+      for (var p = 0; p < otherPeople.length; p++) {
+        var name = otherPeople[p][0];
+        var email = otherPeople[p][1];
         var params = {email_id: latestEmailId, email: email, date_time: emailTimestamp, subject: emailSubject, email_body: emailBody, count: i+1, total: counter};
         if (name) {
           params['name'] = name;
