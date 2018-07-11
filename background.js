@@ -3,6 +3,10 @@ var civioConfig = {
 }
 var ACCESS_TOKEN_PREFIX = '#access_token=';
 var ACCESS_TOKEN_STORAGE_KEY = 'gmail-access-token';
+var ACCESS_TOKEN_TIMESTAMP = 'gmail-access-token-timestamp';
+var ACCESS_TOKEN_EXPIRATION = 'gmail-access-token-expiration';
+
+var expirationTimeRegex = /expires_in=(\d+)/;
 
 var gapioConfig = {
   CLIENT_ID: '1068079364088-hhbgj9mtqsv731qj973q9qo7jhpuhtsr.apps.googleusercontent.com',
@@ -20,6 +24,14 @@ localStorage[GC_COUNTER_PROGRESS] = 0;
 // extension's content scripts can directly access user data without the need for a background page.
 var setAccessToken = function(accessToken) {
   localStorage[ACCESS_TOKEN_STORAGE_KEY] = accessToken;
+  localStorage[ACCESS_TOKEN_TIMESTAMP] = currentTimestamp();
+
+  // The "accessToken" here is actually the full URL query string that starts with the token.
+  // Extract the expiration time from it so we know when the token is finished.
+  var expiryMatch = expirationTimeRegex.exec(accessToken);
+  if (expiryMatch && expiryMatch.length > 1) {
+    localStorage[ACCESS_TOKEN_EXPIRATION] = parseInt(expiryMatch[1]);
+  }
 }
 var getAccessToken = function() {
   var token = localStorage[ACCESS_TOKEN_STORAGE_KEY];
@@ -27,7 +39,26 @@ var getAccessToken = function() {
   return token;
 }
 var clearAccessToken = function() {
-  localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
+  localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+  localStorage.removeItem(ACCESS_TOKEN_TIMESTAMP);
+}
+var isTokenExpired = function() {
+  var timestamp = localStorage[ACCESS_TOKEN_TIMESTAMP];
+  var expiration = localStorage[ACCESS_TOKEN_EXPIRATION];
+  var now = currentTimestamp();
+  if ((now - timestamp) > (expiration - 5)) {
+    var message = 'Token has expired! Please connect again.';
+    clearAccessToken();
+    setStatusMessage(message);
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      chrome.tabs.sendMessage(tabs[0].id, {action: 'content_resetbuttons', message: message, token: null}, function(response) {});
+    });
+    return true;
+  }
+  return false;
+}
+var currentTimestamp = function() {
+  return Math.floor(Date.now() / 1000);
 }
 var setStatusMessage = function(message, showProgress = false, time = 10000) {
   console.log('setStatusMessage', message);
@@ -170,10 +201,13 @@ function authorize(){
 // listen from content for event raised
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
+    if (isTokenExpired()) {
+      sendResponse({'token': null});
+      return;
+    }
     if (request.action == "reconnect") {
       console.log("request in listener", request);
-      var token;
-      token = getAccessToken();
+      var token = getAccessToken();
       if (request.action == "reconnect" && request.button == 'Connect Civi') {
         if (!token) {
           launchAuthorizer();
@@ -197,11 +231,13 @@ chrome.runtime.onMessage.addListener(
         });
       } else {
         console.log('Message id not known. Filing activity based on params.');
-        createActivity({}, request);
+        var result = createActivity({}, request);
+        sendResponse({'createActivity': result});
       }
     }
     else if (request.action == "civiurl") {
-      checkContactExists(request);
+      var result = checkContactExists(request);
+      sendResponse({'checkContactExists': result});
     }
   }
 );
@@ -318,8 +354,14 @@ function createActivity(message, params) {
           }
         }
       },
+      error: function(xhr, textStatus, errorThrown){
+        setStatusMessage('Something went wrong creating activity for "' + params.subject + '"');
+        console.log('error create activity', xhr);
+        return false;
+      }
     });
   });
+  return true;
 }
 
 function createAttachment(attachment, params) {

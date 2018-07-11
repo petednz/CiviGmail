@@ -159,7 +159,9 @@ function callActivityConfirmation(result, params){
 
   // Display error message and exit, if any
   if (result.is_error) {
-    displayErrorMessage(result.message);
+    if (result.message) {  // make sure there is something to display
+      displayErrorMessage(result.message);
+    }
     return;
   }
 
