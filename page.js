@@ -18,6 +18,11 @@ var main = function() {
   userEmail = gmail.get.user_email();
   console.log("user email : ", userEmail);
 
+  // Add button to toggle creating activities when email sent
+  var recButton = gmail.tools.add_toolbar_button('<click connect first>', toggleRecordSentMail);
+  recButton.addClass('recsent_bttn_container');
+  document.dispatchEvent(new CustomEvent('record_sent_mail', {detail: {'action' : 'get'}}));
+
   // Add button to record received email data
   gmail.tools.add_toolbar_button('Record Activity' , recordActivityFromInbox);
 
@@ -272,4 +277,9 @@ function displayErrorMessage(errorMessage){
 function reConnect() {
   //detail could be used to pass more info
   document.dispatchEvent(new CustomEvent('content_reconnect', {detail: {'action' : 'reconnect'}}));
+}
+
+function toggleRecordSentMail() {
+  //detail could be used to pass more info
+  document.dispatchEvent(new CustomEvent('record_sent_mail', {detail: {'action' : 'toggle'}}));
 }
