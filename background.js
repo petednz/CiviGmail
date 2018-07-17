@@ -3,6 +3,10 @@ var civioConfig = {
 }
 var ACCESS_TOKEN_PREFIX = '#access_token=';
 var ACCESS_TOKEN_STORAGE_KEY = 'gmail-access-token';
+var ACCESS_TOKEN_TIMESTAMP = 'gmail-access-token-timestamp';
+var ACCESS_TOKEN_EXPIRATION = 'gmail-access-token-expiration';
+
+var expirationTimeRegex = /expires_in=(\d+)/;
 
 var gapioConfig = {
   CLIENT_ID: '1068079364088-hhbgj9mtqsv731qj973q9qo7jhpuhtsr.apps.googleusercontent.com',
@@ -20,6 +24,14 @@ localStorage[GC_COUNTER_PROGRESS] = 0;
 // extension's content scripts can directly access user data without the need for a background page.
 var setAccessToken = function(accessToken) {
   localStorage[ACCESS_TOKEN_STORAGE_KEY] = accessToken;
+  localStorage[ACCESS_TOKEN_TIMESTAMP] = currentTimestamp();
+
+  // The "accessToken" here is actually the full URL query string that starts with the token.
+  // Extract the expiration time from it so we know when the token is finished.
+  var expiryMatch = expirationTimeRegex.exec(accessToken);
+  if (expiryMatch && expiryMatch.length > 1) {
+    localStorage[ACCESS_TOKEN_EXPIRATION] = parseInt(expiryMatch[1]);
+  }
 }
 var getAccessToken = function() {
   var token = localStorage[ACCESS_TOKEN_STORAGE_KEY];
@@ -27,10 +39,29 @@ var getAccessToken = function() {
   return token;
 }
 var clearAccessToken = function() {
-  localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
+  localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+  localStorage.removeItem(ACCESS_TOKEN_TIMESTAMP);
+}
+var isTokenExpired = function() {
+  var timestamp = localStorage[ACCESS_TOKEN_TIMESTAMP];
+  var expiration = localStorage[ACCESS_TOKEN_EXPIRATION];
+  var now = currentTimestamp();
+  if ((now - timestamp) > (expiration - 5)) {
+    var message = 'Token has expired! Please connect again.';
+    clearAccessToken();
+    setStatusMessage(message);
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      chrome.tabs.sendMessage(tabs[0].id, {action: 'content_resetbuttons', message: message, token: null}, function(response) {});
+    });
+    return true;
+  }
+  return false;
+}
+var currentTimestamp = function() {
+  return Math.floor(Date.now() / 1000);
 }
 var setStatusMessage = function(message, showProgress = false, time = 10000) {
-  console.log(message);
+  console.log('setStatusMessage', message);
   if (showProgress) {
     var progress = getOverallProgress();
     message = progress + '% ' + message;
@@ -74,8 +105,7 @@ function getOverallProgress() {
 launchAuthorizer = function() {
   setStatusMessage('Launching OAuth for Civi..');
   chrome.storage.sync.get(["civioAuthUrl", "civioAuthSec", "civiUrl"], function (obj) {
-    console.log("obj");
-    console.log(obj);
+    console.log("obj", obj);
     var civioAuthUrl = obj.civioAuthUrl;
     var civioAuthSec = obj.civioAuthSec;
     if ($.isEmptyObject(civioAuthUrl) || $.isEmptyObject(civioAuthSec)) { 
@@ -114,7 +144,7 @@ launchAuthorizer = function() {
             var accessToken = code.substring(accessTokenStart + ACCESS_TOKEN_PREFIX.length);
             setAccessToken(accessToken);
             informButtons(accessToken);
-            console.log(accessToken);
+            console.log('access token', accessToken);
             setStatusMessage('OAuthorization Successful.');
           }
         }
@@ -168,19 +198,20 @@ function authorize(){
   );
 }
 
-
 // listen from content for event raised
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
+    if (isTokenExpired()) {
+      sendResponse({'token': null});
+      return;
+    }
     if (request.action == "reconnect") {
-      console.log("request in listener");
-      console.log(request);
-      var token;
-      token = getAccessToken();
+      console.log("request in listener", request);
+      var token = getAccessToken();
       if (request.action == "reconnect" && request.button == 'Connect Civi') {
         if (!token) {
           launchAuthorizer();
-          // sendresponse assuming successfull. Post launch content would be notified anyway
+          // sendresponse assuming successful. Post launch content would be notified anyway
           sendResponse({'token': true});
         } else {
           sendResponse({'token': token});
@@ -200,29 +231,31 @@ chrome.runtime.onMessage.addListener(
         });
       } else {
         console.log('Message id not known. Filing activity based on params.');
-        createActivity({}, request);
+        var result = createActivity({}, request);
+        sendResponse({'createActivity': result});
       }
     }
     else if (request.action == "civiurl") {
-      checkContactExists(request);
+      var result = checkContactExists(request);
+      sendResponse({'checkContactExists': result});
     }
   }
 );
 
 function checkContactExists(request) {
-  console.log("checkcontactexists request");
-  console.log(request);
+  console.log("checkcontactexists request", request);
   // if empty email address
   if (request.email == '') {
     setStatusMessage('Email address not found');
     return false;
   }
-  chrome.storage.sync.get("civiUrl", function (obj) {
+  chrome.storage.sync.get(["civiUrl", "civiApiKey"], function (obj) {
     var token = getAccessToken();
     if (!token) {
       setStatusMessage('Not authorized yet. Try "Connect Civi" first.');
       return false;
     }
+    request.api_key = obj.civiApiKey;
     civiUrl = obj.civiUrl;
     if ($.isEmptyObject(civiUrl)) { 
       setStatusMessage('CiviCRM URL not configured or known. Check options for installed CiviGmail extension.');
@@ -243,9 +276,14 @@ function checkContactExists(request) {
       dataType: "text",
       crossDomain: true,
       success: function (data, textStatus ) {
-        result = JSON.parse(data);
+        try {
+          result = JSON.parse(data);
+        } catch (e) {
+          console.log('JSON.parse exception: ', e);
+          result = { 'is_error': 1, 'message': e.message + ' (did you install all extension dependencies?)' };
+        }
         if (result.is_error) {
-          setStatusMessage('Error during contact check for "' + request.subject + '" - ' + result.error_message);
+          setStatusMessage('Error during contact check for "' + request.subject + '" - ' + result.message);
         }
 
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
@@ -287,8 +325,8 @@ function createActivity(message, params) {
       data: formData,
       success: function (data, textStatus) {
         console.log("activity posted with..");
-        console.log(data);
-        console.log(textStatus);
+        console.log('create activity data', data);
+        console.log('activity textStatus', textStatus);
         if (data.id && !$.isEmptyObject(message)) {
           setCounterProgress();
           setStatusMessage('Activity created for "' + params.subject + '"', true);
@@ -316,8 +354,14 @@ function createActivity(message, params) {
           }
         }
       },
+      error: function(xhr, textStatus, errorThrown){
+        setStatusMessage('Something went wrong creating activity for "' + params.subject + '"');
+        console.log('error create activity', xhr);
+        return false;
+      }
     });
   });
+  return true;
 }
 
 function createAttachment(attachment, params) {
@@ -332,7 +376,7 @@ function createAttachment(attachment, params) {
     formData.append('mimeType', params.mimetype);
 
     formData.append('file', new Blob([attachment.data], {type: params.mimetype}), params.filename);
-    console.log(formData);
+    console.log('formData:', formData);
 
     $.ajax({
       type: "POST",
@@ -345,7 +389,7 @@ function createAttachment(attachment, params) {
         setCounterProgress();
         setStatusMessage('Uploaded activity attachment for "' + params.subject + '" - ' + params.filename, true);
         // FIXME: inform user of any failures
-        console.log(textStatus);
+        console.log('attachment textStatus:', textStatus);
       },
     });
   });
@@ -378,5 +422,5 @@ function get(options) {
   //xhr.setRequestHeader('Authorization', 'Bearer ' + session.access_token);
   console.log("xhr call: " + options.url)
   xhr.send();
-  console.log(xhr);
+  console.log('xhr', xhr);
 }

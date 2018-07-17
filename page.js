@@ -15,8 +15,13 @@ var main = function() {
   bttn = gmail.tools.add_toolbar_button('Connect Civi' , reConnect);
   bttn.addClass('coge_bttn_container');
 
-  $userEmail = gmail.get.user_email();
-  console.log("user email : ", $userEmail);
+  userEmail = gmail.get.user_email();
+  console.log("user email : ", userEmail);
+
+  // Add button to toggle creating activities when email sent
+  var recButton = gmail.tools.add_toolbar_button('<click connect first>', toggleRecordSentMail);
+  recButton.addClass('recsent_bttn_container');
+  document.dispatchEvent(new CustomEvent('record_sent_mail', {detail: {'action' : 'get'}}));
 
   // Add button to record received email data
   gmail.tools.add_toolbar_button('Record Activity' , recordActivityFromInbox);
@@ -28,13 +33,12 @@ refresh(main);
 
 // Function to record activity for selcted email
 function recordActivityFromInbox(){
-  // get slected emails data
+  // get selected emails data
   var selectedEmailsData = gmail.get.selected_emails_data();
   console.log('selectedEmailsData', selectedEmailsData);
 
-  var counter = 0;
+  var counter = selectedEmailsData.length;
   if (selectedEmailsData.length > 0) {
-    counter = selectedEmailsData.length;
     console.log("selectedEmailsData.length=" + selectedEmailsData.length);
     for (var i = 0; i < selectedEmailsData.length; i++) {
       var latestEmailId = selectedEmailsData[i].last_email;
@@ -57,24 +61,23 @@ function recordActivityFromInbox(){
       }
     }
   }
+  var userEmail = gmail.get.user_email();
   console.log("counter=" + counter);
   if (selectedEmailsData.length > 0) {
     for (var i = 0; i < selectedEmailsData.length; i++) {
       console.log('selectedEmailsData[i]', selectedEmailsData[i]);
-      // get the last email id from the thread
-      var latestEmailId = selectedEmailsData[i].last_email;
-  
       // get the email data of the last email from the thread
+      var latestEmailId = selectedEmailsData[i].last_email;
       for(var key in selectedEmailsData[i].threads){
         if (key == latestEmailId) {
           var emailData = selectedEmailsData[i].threads[key];
         }
       }
 
-      // get required values to pass to civi
-      var email = emailData.from_email;
+      // Get the email subject, body, and timestamp from the last message in the thread
       var emailSubject = emailData.subject;
       var emailBody = emailData.content_plain;
+      var emailTimestamp = emailData.timestamp / 1000;
 
       // get attachments, if any
       //var emailAttachments = [];
@@ -99,14 +102,24 @@ function recordActivityFromInbox(){
 
       //  }
       //}
-      // call log activity API
-      var params = {email_id: latestEmailId, email: email, subject: emailSubject, email_body: emailBody, count: i+1, total: counter};
-      document.dispatchEvent(new CustomEvent('content_civiurl', {detail: params}));
+
+      // Call log activity API using the name and email address of every person on the email (excluding us)
+      var otherPeople = selectedEmailsData[i].people_involved.filter(p => p[1] !== userEmail);
+      console.log('Persons on email: ', otherPeople);
+      for (var p = 0; p < otherPeople.length; p++) {
+        var name = otherPeople[p][0];
+        var email = otherPeople[p][1];
+        var params = {email_id: latestEmailId, email: email, date_time: emailTimestamp, subject: emailSubject, email_body: emailBody, count: i+1, total: counter};
+        if (name) {
+          params['name'] = name;
+        }
+        document.dispatchEvent(new CustomEvent('content_civiurl', {detail: params}));
+      }
     }
   } else{
     // if no emails selected, instruct to select one
     console.log('no emails selected');
-    alert('select atleast one email to continue');
+    alert('select at least one email to continue');
   }
 }
 
@@ -146,13 +159,13 @@ document.addEventListener('page_setstatus', function(e) {
 
 // Process HTTP response and call relevant confirmation screens
 function callActivityConfirmation(result, params){
-  console.log("callActivityConfirmation");
-  console.log(result);
-  console.log(params);
+  console.log("callActivityConfirmation", result, params);
 
   // Display error message and exit, if any
   if (result.is_error) {
-    displayErrorMessage(result.error_message);
+    if (result.message) {  // make sure there is something to display
+      displayErrorMessage(result.message);
+    }
     return;
   }
 
@@ -263,4 +276,9 @@ function displayErrorMessage(errorMessage){
 function reConnect() {
   //detail could be used to pass more info
   document.dispatchEvent(new CustomEvent('content_reconnect', {detail: {'action' : 'reconnect'}}));
+}
+
+function toggleRecordSentMail() {
+  //detail could be used to pass more info
+  document.dispatchEvent(new CustomEvent('record_sent_mail', {detail: {'action' : 'toggle'}}));
 }

@@ -20,15 +20,43 @@ var resetButtons = function(token) {
   }
 }
 
+var resetRecordButton = function(recordSentMail) {
+  // &#9744; is empty checkbox; &#9745; is filled checkbox
+  if (recordSentMail) {
+    $('div.recsent_bttn_container > div').text(String.fromCharCode(9745) + ' Record Sent Mails');
+  } else {
+    $('div.recsent_bttn_container > div').text(String.fromCharCode(9744) + ' Record Sent Mails');
+  }
+}
+
 // Event listener for page
 document.addEventListener('content_reconnect', function(e) {
   // fixme: could use some class than label
-  e.detail.button = $('div.coge_bttn_container > div').text();
+  var detail = Object.assign({ 'button': $('div.coge_bttn_container > div').text() }, e.detail);
 
   // send message to background
-  chrome.runtime.sendMessage(e.detail, function(response) {
+  chrome.runtime.sendMessage(detail, function(response) {
     var token = response.token;
     resetButtons(token);
+  });
+});
+
+// Event listener for page
+document.addEventListener('record_sent_mail', function(e) {
+  var action = e.detail.action;
+  chrome.storage.sync.get({
+    "recordSentMail": false
+  }, function (rec) {
+    if (action == 'toggle') {
+      var value = !rec.recordSentMail;
+      chrome.storage.sync.set({
+        recordSentMail: value
+      }, function() {
+        resetRecordButton(value);
+      });
+    } else if (action == 'get') {
+      resetRecordButton(rec.recordSentMail);
+    }
   });
 });
 
@@ -38,6 +66,7 @@ chrome.runtime.onMessage.addListener(
     if (request.action == "content_resetbuttons") {
       var token = request.token;
       resetButtons(token);
+      document.dispatchEvent(new CustomEvent('record_sent_mail', {detail: {'action' : 'get'}}));
     }
     if (request.action == "content_civiurl") {
       document.dispatchEvent(new CustomEvent('page_civiurl', {detail: request}));
@@ -50,18 +79,32 @@ chrome.runtime.onMessage.addListener(
 
 // Event listener for page
 document.addEventListener('content_gmailapi', function(e) {
-  e.detail.action = 'gmailapi';
+  var detail = Object.assign({ 'action': 'gmailapi' }, e.detail);
   // send message to background
-  chrome.runtime.sendMessage(e.detail, function(response) {
-    console.log(response);
+  chrome.runtime.sendMessage(detail, function(response) {
+    console.log('gmailapi response', response);
   });
 });
 
 // Event listener for page
 document.addEventListener('content_civiurl', function(e) {
-  e.detail.action = 'civiurl';
-  // send message to background
-  chrome.runtime.sendMessage(e.detail, function(response) {
-    console.log(response);
-  });
+  var detail = Object.assign({ 'action': 'civiurl' }, e.detail);
+  if (detail.email_id) {
+    // send message to background
+    chrome.runtime.sendMessage(detail, function(response) {
+      console.log('civiurl response', response);
+    });
+  } else {
+    // If this is a sent mail, check if we're supposed to record it
+    chrome.storage.sync.get({
+      "recordSentMail": false
+    }, function (rec) {
+      if (rec.recordSentMail) {
+        // send message to background
+        chrome.runtime.sendMessage(detail, function(response) {
+          console.log('civiurl response', response);
+        });
+      }
+    });
+  }
 });
